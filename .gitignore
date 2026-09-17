@@ -1,0 +1,8 @@
+output/
+evidence/
+*.pfx
+*.p12
+*.key
+*.cer
+*.log
+*.local.json
