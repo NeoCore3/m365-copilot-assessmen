@@ -1,0 +1,15 @@
+name: Validate assessment toolkit
+on:
+  push:
+    branches: ["feature/assessment-toolkit", "main"]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse and run offline behavioral checks
+        shell: pwsh
+        run: ./tests/Test-Toolkit.ps1
