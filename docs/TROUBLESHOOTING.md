@@ -67,3 +67,34 @@ The collector performs no consent, role assignment or policy changes. Fixes to r
 - [App-only Exchange and Purview authentication](https://learn.microsoft.com/en-us/powershell/exchange/app-only-auth-powershell-v2)
 - [Find Exchange cmdlet permissions](https://learn.microsoft.com/en-us/powershell/exchange/find-exchange-cmdlet-permissions)
 - [SharePoint connection syntax](https://learn.microsoft.com/en-us/powershell/module/microsoft.online.sharepoint.powershell/connect-sposervice)
+
+## Missing Exchange module and unsupported SharePoint browser parameter
+
+If diagnostics reports `Modules_ModuleNotFound` for ExchangeOnlineManagement, both Purview and Defender for Office 365 connections are blocked locally, before sign-in. Install the module in **PowerShell 7** using the same Windows user who runs the assessment:
+
+```powershell
+Install-Module ExchangeOnlineManagement -Scope CurrentUser -Repository PSGallery
+Get-Module ExchangeOnlineManagement -ListAvailable | Select-Object Name,Version,Path
+```
+
+If diagnostics reports that `UseSystemBrowser` is not recognized, the imported SPO command does not expose that parameter. The updated collector inspects command capabilities: it uses UseSystemBrowser when available, otherwise explicitly selects ModernAuth when supported. It never substitutes stored passwords or basic authentication. Unsupported certificate or government-endpoint parameters result in an actionable prerequisite error.
+
+Update the SPO module in **Windows PowerShell 5.1**, under the same Windows user:
+
+```powershell
+Install-Module Microsoft.Online.SharePoint.PowerShell -Scope CurrentUser -Repository PSGallery -Force
+Get-Module Microsoft.Online.SharePoint.PowerShell -ListAvailable | Select-Object Name,Version,Path
+```
+
+Close all assessment shells after installation so old modules and compatibility proxies are unloaded. Open `pwsh -NoProfile`, then verify:
+
+```powershell
+Import-Module ExchangeOnlineManagement -ErrorAction Stop
+Get-Command Connect-IPPSSession,Connect-ExchangeOnline
+Import-Module Microsoft.Online.SharePoint.PowerShell -UseWindowsPowerShell -ErrorAction Stop
+Get-Command Connect-SPOService -Syntax
+```
+
+A reported SPO version of 1.0 can describe the generated compatibility proxy, so do not infer the native module's version from that number. Use the Windows PowerShell 5.1 module listing above. After verification, rerun the assessment with the same customer parameters. Installing workstation modules does not grant customer permissions; any subsequent authorization error needs separate diagnosis.
+
+For downloaded ZIPs under RemoteSigned, review the toolkit and unblock its .ps1 files before running. AllSigned environments need the organization's approved code-signing process.

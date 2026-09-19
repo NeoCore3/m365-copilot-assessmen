@@ -31,6 +31,7 @@ foreach ($d in @($directory,(Join-Path $directory 'raw'),(Join-Path $directory '
 $results = [System.Collections.Generic.List[object]]::new()
 $diagnostics = [System.Collections.Generic.List[object]]::new()
 . (Join-Path $PSScriptRoot 'Diagnostics.ps1')
+. (Join-Path $PSScriptRoot 'WorkloadPrerequisites.ps1')
 $manifest = [ordered]@{SchemaVersion='1.0';CustomerName=$CustomerName;TenantId="$TenantId";Cloud=$Cloud;Authentication=$Authentication;Period=$Period;CollectedAtUtc=[datetime]::UtcNow.ToString('o');Results=$results}
 function Add-Result {
  param([string]$Workstream,[string]$Id,[string]$Status,[string]$Source,[string]$Explanation,[object[]]$Rows=@())
@@ -118,10 +119,8 @@ try {
  if ($IncludeSharePoint) {
   try {
    Import-Module Microsoft.Online.SharePoint.PowerShell -UseWindowsPowerShell -ErrorAction Stop
-   $s=@{Url=$SharePointAdminUrl;ErrorAction='Stop'}
-   if ($Cloud -eq 'GCCHigh') { $s.AuthenticationUrl=$profile.Authority+'/organizations' }
-   if ($Authentication -eq 'Certificate') { $s.ClientId=$ClientId;$s.TenantId="$TenantId";$s.CertificateThumbprint=$CertificateThumbprint }
-   else { $s.UseSystemBrowser=$true }
+   $spoCommand=Get-Command Connect-SPOService -ErrorAction Stop
+   $s=Get-AssessmentSpoParameters -Command $spoCommand -Url $SharePointAdminUrl -Cloud $Cloud -Authority $profile.Authority -Authentication $Authentication -ClientId $ClientId -TenantId "$TenantId" -CertificateThumbprint $CertificateThumbprint
    Connect-SPOService @s | Out-Null
    $spoConnected=$true
   } catch {

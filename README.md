@@ -90,3 +90,5 @@ Run `./tests/Test-Toolkit.ps1` in pwsh. CI performs syntax and offline behaviora
 See [connection troubleshooting](docs/TROUBLESHOOTING.md). Requested datasets whose connection failed are `BlockedByConnection`, not empty results. `CommandUnavailable` means the session did not expose a cmdlet; this can reflect module, workload RBAC or cloud/service availability. Other command errors remain `Failed`, with the service message in `diagnostics.csv`.
 
 `-IncludeDefender` now opens an Exchange Online connection as well as collecting Graph Secure Score. In certificate mode, supply `-Organization` and provision Exchange application authorization/RBAC before enabling it. Existing Graph-only app consent is insufficient.
+
+The SharePoint collector checks the imported command's authentication parameters before connecting, including compatibility with versions that expose ModernAuth but not UseSystemBrowser. Missing Exchange modules produce explicit installation guidance in both the console and diagnostics.csv. See [workstation prerequisite fixes](docs/TROUBLESHOOTING.md#missing-exchange-module-and-unsupported-sharepoint-browser-parameter).

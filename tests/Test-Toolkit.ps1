@@ -126,5 +126,27 @@ try{
    Assert-True ($connectionCapture.complianceUri -eq 'https://ps.compliance.protection.office365.us/powershell-liveid/' -and $connectionCapture.authority -eq 'https://login.microsoftonline.us/organizations') 'Government Purview endpoint routing failed'
   }else{Assert-True (-not $connectionCapture.complianceUri -and -not $connectionCapture.authority) 'Commercial/GCC should use default Purview endpoints'}
  }
+ # The reported SPO failure: older modern-auth commands must not receive UseSystemBrowser.
+ . (Join-Path $root 'src/WorkloadPrerequisites.ps1')
+ function Test-SpoOld {param($Url,$ModernAuth,$AuthenticationUrl)}
+ function Test-SpoNew {param($Url,$UseSystemBrowser,$AuthenticationUrl,$ClientId,$TenantId,$CertificateThumbprint)}
+ function Test-SpoUnsupported {param($Url)}
+ $p=Get-AssessmentSpoParameters -Command (Get-Command Test-SpoOld) -Url 'https://example-admin.sharepoint.com' -Cloud Commercial -Authentication Interactive
+ Assert-True ($p.ModernAuth -eq $true -and -not $p.ContainsKey('UseSystemBrowser')) 'Older SPO modern-auth compatibility failed'
+ $p=Get-AssessmentSpoParameters -Command (Get-Command Test-SpoNew) -Url 'https://example-admin.sharepoint.us' -Cloud GCCHigh -Authority 'https://login.microsoftonline.us' -Authentication Interactive
+ Assert-True ($p.UseSystemBrowser -eq $true -and $p.AuthenticationUrl -eq 'https://login.microsoftonline.us/organizations') 'New SPO browser/government routing failed'
+ $p=Get-AssessmentSpoParameters -Command (Get-Command Test-SpoNew) -Url 'https://example-admin.sharepoint.com' -Cloud Commercial -Authentication Certificate -ClientId 'app' -TenantId 'tenant' -CertificateThumbprint 'thumb'
+ Assert-True ($p.CertificateThumbprint -eq 'thumb' -and -not $p.ContainsKey('UseSystemBrowser') -and -not $p.ContainsKey('ModernAuth')) 'Certificate parameters mixed with interactive parameters'
+ foreach($case in @(@('Test-SpoOld','Certificate'),@('Test-SpoUnsupported','Interactive'))){
+  $rejected=$false
+  try { Get-AssessmentSpoParameters -Command (Get-Command $case[0]) -Cloud Commercial -Authentication $case[1] | Out-Null } catch { $rejected=$_.Exception.Message -match 'SharePoint prerequisite:' }
+  Assert-True $rejected 'Unsupported SPO capability should produce an actionable prerequisite error'
+ }
+ # Reproduce the exact missing-module error ID supplied by the customer.
+ . (Join-Path $root 'src/Diagnostics.ps1')
+ $diagnostics=[System.Collections.Generic.List[object]]::new()
+ $record=[System.Management.Automation.ErrorRecord]::new([System.IO.FileNotFoundException]::new("The specified module 'ExchangeOnlineManagement' was not loaded"),'Modules_ModuleNotFound,Microsoft.PowerShell.Commands.ImportModuleCommand',[System.Management.Automation.ErrorCategory]::ResourceUnavailable,$null)
+ $detail=Add-AssessmentDiagnostic 'PurviewConnection' 'Connect-IPPSSession' $record
+ Assert-True ($detail -match 'Install-Module ExchangeOnlineManagement' -and $detail -match 'before tenant authentication') 'Missing module must give installation guidance'
  Write-Host 'PASS: parser, CSV safety, HTML escaping, paging, cloud isolation, error propagation and six entry-point failure reports.'
 }finally{Remove-Item -LiteralPath $temp -Recurse -Force}
