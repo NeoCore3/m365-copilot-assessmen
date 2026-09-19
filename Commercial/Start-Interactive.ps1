@@ -1,4 +1,4 @@
-#requires -Version 7.2
+#requires -Version 7.4
 [CmdletBinding()]
 param(
  [Parameter(Mandatory)][guid]$TenantId,
@@ -13,7 +13,8 @@ param(
  [string]$EvidencePath,
  [switch]$IncludePurview,
  [switch]$IncludeSharePoint,
- [switch]$IncludeDefender
+ [switch]$IncludeDefender,
+ [switch]$DisableWAM
 )
 $root = Split-Path $PSScriptRoot -Parent
 & (Join-Path $root 'src/Invoke-Assessment.ps1') @PSBoundParameters -Cloud 'Commercial' -Authentication 'Interactive'
