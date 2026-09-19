@@ -10,7 +10,11 @@ function Add-AssessmentDiagnostic {
  param([string]$Id,[string]$Source,[System.Management.Automation.ErrorRecord]$Record)
  $message=Protect-AssessmentDiagnostic ($Record.Exception.Message)
  $hint='Check the service error, tenant/cloud, module version, workload RBAC and service availability. A failed query is not an empty dataset.'
- if ($Record.Exception -is [System.Management.Automation.CommandNotFoundException]) {
+ if ($Record.FullyQualifiedErrorId -match 'Modules_ModuleNotFound' -and $message -match 'ExchangeOnlineManagement') {
+  $hint='Workstation prerequisite missing. In PowerShell 7 under the same Windows user, run: Install-Module ExchangeOnlineManagement -Scope CurrentUser -Repository PSGallery. Restart pwsh -NoProfile and verify Get-Module ExchangeOnlineManagement -ListAvailable. This failure occurred before tenant authentication.'
+ } elseif ($message -match 'SharePoint prerequisite:' -or ($Record.FullyQualifiedErrorId -match 'NamedParameterNotFound' -and $Source -eq 'Connect-SPOService')) {
+  $hint='Loaded SharePoint command is incompatible with the requested parameters. Install/update Microsoft.Online.SharePoint.PowerShell in Windows PowerShell 5.1, then close all assessment PowerShell windows and reopen pwsh. A compatibility proxy version of 1.0 is not the underlying SPO module version. Verify Get-Command Connect-SPOService -Syntax after importing.'
+ } elseif ($Record.Exception -is [System.Management.Automation.CommandNotFoundException]) {
   $hint='The command is not available in this session. Check module version, service/cloud support and the effective workload RBAC that controls imported commands.'
  } elseif ($message -match 'AADSTS65001|consent_required|admin.*consent') {
   $hint='Customer administrator consent is required for the requested application permissions. Workload RBAC is separate.'
@@ -26,6 +30,7 @@ function Add-AssessmentDiagnostic {
   ErrorId=(Protect-AssessmentDiagnostic $Record.FullyQualifiedErrorId)
   Message=$message;Guidance=$hint;PowerShellVersion="$($PSVersionTable.PSVersion)";LoadedModules=$modules
  })
+ Write-Warning "$Id : $message $hint"
  return "$message $hint See diagnostics.csv ($Id)."
 }
 function Set-AssessmentWamOption {
