@@ -44,3 +44,9 @@ Optional Purview collection adds labels, publishing policies, DLP policies/rules
 ## Assessment interpretation
 
 The customer-facing reference documents were consulted for evidence principles and assessment scope; their individual tenant values and readiness judgments are not embedded in this toolkit. The implementation preserves missing-evidence distinctions, source dates, licensing/usage boundaries and expansion gates. This is not a reproduction or full automated extraction of every reference-document finding.
+
+## Defender for Office 365 configuration
+
+`-IncludeDefender` additionally collects 15 Exchange Online datasets: anti-phishing, Safe Links, Safe Attachments, inbound spam, outbound spam and anti-malware policies **and their rules**, plus `Get-AtpPolicyForO365`, `Get-ATPProtectionPolicyRule` and `Get-EOPProtectionPolicyRule`. Policy assignments, exclusions, priorities and preset-policy rules must be reviewed together. These commands run independently of Graph and Purview; each command has its own collection status.
+
+`DefenderConfiguration` remains supplemental manual evidence for areas these commands do not cover, including Defender for Endpoint, Defender for Identity, Defender for Cloud Apps, exposure management and incidents. No full Defender or Purview portal extraction is claimed. Licensing and cloud availability can limit individual commands.

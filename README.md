@@ -1,6 +1,6 @@
 # Microsoft 365 Copilot Assessment Toolkit
 
-Read-only evidence collection for Windows PowerShell **7.2+ (pwsh)**, with an offline HTML assessment, charts, dataset CSVs, consolidated workstream CSVs and raw JSON evidence.
+Read-only evidence collection for Windows PowerShell **7.4+ (pwsh)**, with an offline HTML assessment, charts, dataset CSVs, consolidated workstream CSVs and raw JSON evidence.
 
 ## Choose a cloud and authentication method
 
@@ -62,6 +62,7 @@ Default: `%LOCALAPPDATA%/M365Assessment/<cloud>-<tenant>-<unique-run>/`.
 
 - **Assessment.html**: offline report, evidence coverage chart, SKU allocation graph, explanatory tables, search and CSV links.
 - **collection-status.csv**: authoritative dataset collection status.
+- **diagnostics.csv**: service error summaries, error IDs, loaded module versions and troubleshooting guidance. Review for customer identifiers before sharing.
 - **manifest.json**: tenant/cloud, period, timestamps and dataset provenance.
 - **csv/<dataset>.csv** and **csv/Workstream-<name>.csv**: all collected rows, with nested data represented as JSON.
 - **raw/<dataset>.json**: unmodified values serialized from collected objects, before CSV formula protection.
@@ -70,7 +71,7 @@ Keep the report folder together for CSV links. HTML previews show at most 100 ro
 
 ## Coverage and limits
 
-Automated: organization, SKUs/service plans, user assignments, collaboration usage, licensed Copilot activity, Conditional Access, security defaults, enterprise applications, Secure Score, Graph SharePoint settings, optional Purview policies/rules/labels, SPO tenant/site and OneDrive site settings.
+Automated: organization, SKUs/service plans, user assignments, collaboration usage, licensed Copilot activity, Conditional Access, security defaults, enterprise applications, Secure Score, Graph SharePoint settings, optional Purview policies/rules/labels, Defender for Office 365/EOP policies and rules, SPO tenant/site and OneDrive site settings.
 
 [Evidence coverage](docs/COVERAGE.md) explicitly lists areas needing imported portal evidence: unlicensed Chat, prompt totals, Copilot optimization, SAM/DAG, item-level permissions, DSPM/AI, Compliance Manager, IRM, full Defender posture, Security Copilot, actual agent inventory, Copilot Studio, Power Platform and Fabric. Those areas are **not automatically collected in this version**. Import support is provided; no unavailable control is reported as disabled.
 
@@ -83,3 +84,9 @@ Place an original CSV named after its dataset ID in a local evidence directory, 
 ## Validation
 
 Run `./tests/Test-Toolkit.ps1` in pwsh. CI performs syntax and offline behavioral checks on Windows. **No customer tenant has been used for integration validation.** Before production use, validate the six applicable connection paths, API permissions and module versions in authorized test tenants. A green CI run does not demonstrate tenant access or service availability.
+
+## Troubleshoot missing Purview, Defender or SharePoint data
+
+See [connection troubleshooting](docs/TROUBLESHOOTING.md). Requested datasets whose connection failed are `BlockedByConnection`, not empty results. `CommandUnavailable` means the session did not expose a cmdlet; this can reflect module, workload RBAC or cloud/service availability. Other command errors remain `Failed`, with the service message in `diagnostics.csv`.
+
+`-IncludeDefender` now opens an Exchange Online connection as well as collecting Graph Secure Score. In certificate mode, supply `-Organization` and provision Exchange application authorization/RBAC before enabling it. Existing Graph-only app consent is insufficient.

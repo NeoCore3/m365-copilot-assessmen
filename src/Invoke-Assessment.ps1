@@ -1,4 +1,4 @@
-#requires -Version 7.2
+#requires -Version 7.4
 [CmdletBinding()]
 param(
  [Parameter(Mandatory)][guid]$TenantId,
@@ -10,7 +10,8 @@ param(
  [ValidateSet('D7','D30','D90','D180')][string]$Period='D90',
  [string]$OutputRoot=(Join-Path $env:LOCALAPPDATA 'M365Assessment'),
  [string]$EvidencePath,
- [switch]$IncludePurview, [switch]$IncludeSharePoint, [switch]$IncludeDefender
+ [switch]$IncludePurview, [switch]$IncludeSharePoint, [switch]$IncludeDefender,
+ [switch]$DisableWAM
 )
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'Report.ps1')
@@ -18,7 +19,7 @@ $root = Split-Path $PSScriptRoot -Parent
 $profile = Get-Content (Join-Path $root "config/$Cloud.json") -Raw | ConvertFrom-Json
 $catalog = @(Get-Content (Join-Path $root 'config/collectors.json') -Raw | ConvertFrom-Json)
 if ($Authentication -eq 'Certificate' -and (-not $ClientId -or -not $CertificateThumbprint)) { throw 'Certificate mode requires ClientId and CertificateThumbprint.' }
-if ($Authentication -eq 'Certificate' -and $IncludePurview -and -not $Organization) { throw 'Purview certificate mode requires the tenant initial Organization domain.' }
+if ($Authentication -eq 'Certificate' -and ($IncludePurview -or $IncludeDefender) -and -not $Organization) { throw 'Purview/Defender certificate mode requires the tenant initial Organization domain.' }
 if ($IncludeSharePoint) {
  $uri = [uri]$SharePointAdminUrl
  if (-not $uri.IsAbsoluteUri -or $uri.Scheme -ne 'https' -or -not $uri.Host.EndsWith($profile.SharePointSuffix) -or $uri.Host -notmatch '-admin\.sharepoint\.') { throw 'Provide the correct HTTPS SharePoint admin URL for the selected cloud.' }
@@ -28,6 +29,8 @@ $runId = [datetime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ') + '-' + [guid]::NewG
 $directory = Join-Path $OutputRoot "$Cloud-$TenantId-$runId"
 foreach ($d in @($directory,(Join-Path $directory 'raw'),(Join-Path $directory 'csv'))) { New-Item -ItemType Directory -Path $d -Force | Out-Null }
 $results = [System.Collections.Generic.List[object]]::new()
+$diagnostics = [System.Collections.Generic.List[object]]::new()
+. (Join-Path $PSScriptRoot 'Diagnostics.ps1')
 $manifest = [ordered]@{SchemaVersion='1.0';CustomerName=$CustomerName;TenantId="$TenantId";Cloud=$Cloud;Authentication=$Authentication;Period=$Period;CollectedAtUtc=[datetime]::UtcNow.ToString('o');Results=$results}
 function Add-Result {
  param([string]$Workstream,[string]$Id,[string]$Status,[string]$Source,[string]$Explanation,[object[]]$Rows=@())
@@ -44,7 +47,11 @@ function Add-Result {
 function Invoke-ReadCollector {
  param([string]$Workstream,[string]$Id,[string]$Source,[string]$Explanation,[scriptblock]$Read)
  try { $rows=@(& $Read); Add-Result $Workstream $Id 'Collected' $Source $Explanation $rows }
- catch { Add-Result $Workstream $Id 'Failed' $Source ($Explanation + ' Collection failed: ' + $_.Exception.GetType().Name + '. Verify module, role, consent, service availability and connectivity; no zero result inferred.') }
+ catch {
+  $detail=Add-AssessmentDiagnostic -Id $Id -Source $Source -Record $_
+  $status=if($_.Exception -is [System.Management.Automation.CommandNotFoundException]){'CommandUnavailable'}else{'Failed'}
+  Add-Result $Workstream $Id $status $Source ($Explanation + ' ' + $detail)
+ }
 }
 $graphConnected=$false; $exchangeConnected=$false; $spoConnected=$false
 try {
@@ -62,7 +69,8 @@ try {
   if ($ctx.TenantId -ne "$TenantId" -or $ctx.Environment -ne $profile.GraphEnvironment) { throw 'Graph tenant/cloud mismatch.' }
   $graphConnected=$true
  } catch {
-  Add-Result 'Connection' 'GraphConnection' 'Failed' 'Connect-MgGraph' 'Graph authentication or context validation failed. Verify tenant, cloud, module, consent and credentials.'
+  $detail=Add-AssessmentDiagnostic 'GraphConnection' 'Connect-MgGraph' $_
+  Add-Result 'Connection' 'GraphConnection' 'Failed' 'Connect-MgGraph' $detail
  }
  foreach ($c in @($catalog | Where-Object Kind -ne 'Manual')) {
   if ($c.Workstream -eq 'Defender' -and -not $IncludeDefender) {
@@ -71,7 +79,7 @@ try {
   if ($c.GlobalOnly -and -not $profile.CopilotUsageSupported) {
    Add-Result $c.Workstream $c.Id 'UnsupportedCloud' $c.Path 'This Copilot usage API is not available in GCC High. Supply authorized portal evidence if the workload is available.'; continue
   }
-  if (-not $graphConnected) { Add-Result $c.Workstream $c.Id 'Failed' $c.Path 'Graph connection unavailable; configuration and usage are unknown.'; continue }
+  if (-not $graphConnected) { Add-Result $c.Workstream $c.Id 'BlockedByConnection' $c.Path 'Graph connection failed. See GraphConnection in diagnostics.csv; configuration and usage are unknown.'; continue }
   $path=$c.Path.Replace('{period}',$Period)
   Invoke-ReadCollector $c.Workstream $c.Id $path $c.Explanation { Get-GraphRows -Path $path -Csv:($c.Kind -eq 'Csv') }
  }
@@ -86,17 +94,23 @@ try {
  if ($IncludePurview) {
   try {
    Import-Module ExchangeOnlineManagement -ErrorAction Stop
-   $p=@{ConnectionUri=$profile.ComplianceUri;AzureADAuthorizationEndpointUri=($profile.Authority+'/organizations');ErrorAction='Stop'}
+   $p=@{ErrorAction='Stop'}
+   if ($Cloud -eq 'GCCHigh') { $p.ConnectionUri=$profile.ComplianceUri; $p.AzureADAuthorizationEndpointUri=$profile.Authority+'/organizations' }
+   Set-AssessmentWamOption -Parameters $p -Command 'Connect-IPPSSession'
    if ($Authentication -eq 'Certificate') { $p.AppId=$ClientId;$p.CertificateThumbprint=$CertificateThumbprint;$p.Organization=$Organization }
    elseif ($AdminUPN) { $p.UserPrincipalName=$AdminUPN }
    Connect-IPPSSession @p | Out-Null
    $exchangeConnected=$true; $purviewReady=$true
-  } catch { Add-Result 'Connection' 'PurviewConnection' 'Failed' 'Connect-IPPSSession' 'Purview connection failed. Check module and workload-specific RBAC and app permissions.' }
+  } catch {
+   $detail=Add-AssessmentDiagnostic 'PurviewConnection' 'Connect-IPPSSession' $_
+   Add-Result 'Connection' 'PurviewConnection' 'Failed' 'Connect-IPPSSession' $detail
+  }
  }
  foreach ($p in $purview) {
   if (-not $purviewReady) {
-   $s=if($IncludePurview){'Failed'}else{'NotRequested'}
-   Add-Result 'Purview' $p[0] $s $p[1] 'Enable IncludePurview and provision the required Purview roles to collect configuration.'; continue
+   $s=if($IncludePurview){'BlockedByConnection'}else{'NotRequested'}
+   $why=if($IncludePurview){'Purview connection failed. See PurviewConnection in diagnostics.csv.'}else{'Enable IncludePurview to request this dataset.'}
+   Add-Result 'Purview' $p[0] $s $p[1] $why; continue
   }
   $command=$p[1]
   Invoke-ReadCollector 'Purview' $p[0] $command 'Policy/configuration snapshot. Review mode, scope, exclusions and enforcement evidence separately.' { & $command -ErrorAction Stop }
@@ -104,17 +118,22 @@ try {
  if ($IncludeSharePoint) {
   try {
    Import-Module Microsoft.Online.SharePoint.PowerShell -UseWindowsPowerShell -ErrorAction Stop
-   $s=@{Url=$SharePointAdminUrl;AuthenticationUrl=($profile.Authority+'/organizations');ErrorAction='Stop'}
+   $s=@{Url=$SharePointAdminUrl;ErrorAction='Stop'}
+   if ($Cloud -eq 'GCCHigh') { $s.AuthenticationUrl=$profile.Authority+'/organizations' }
    if ($Authentication -eq 'Certificate') { $s.ClientId=$ClientId;$s.TenantId="$TenantId";$s.CertificateThumbprint=$CertificateThumbprint }
    else { $s.UseSystemBrowser=$true }
    Connect-SPOService @s | Out-Null
    $spoConnected=$true
-  } catch { Add-Result 'Connection' 'SharePointConnection' 'Failed' 'Connect-SPOService' 'SharePoint connection failed. Check the admin URL, installed module, certificate support and workload permissions.' }
+  } catch {
+   $detail=Add-AssessmentDiagnostic 'SharePointConnection' 'Connect-SPOService' $_
+   Add-Result 'Connection' 'SharePointConnection' 'Failed' 'Connect-SPOService' $detail
+  }
  }
  foreach ($definition in @(@('SharePoint','SharePointTenant','Get-SPOTenant'),@('SharePoint','SharePointSites','Get-SPOSite'),@('OneDrive','OneDriveSites','Get-SPOSite'))) {
   if (-not $spoConnected) {
-   $s=if($IncludeSharePoint){'Failed'}else{'NotRequested'}
-   Add-Result $definition[0] $definition[1] $s $definition[2] 'Enable IncludeSharePoint with a valid admin URL and workload permissions.'; continue
+   $s=if($IncludeSharePoint){'BlockedByConnection'}else{'NotRequested'}
+   $why=if($IncludeSharePoint){'SharePoint connection failed. See SharePointConnection in diagnostics.csv.'}else{'Enable IncludeSharePoint with a valid admin URL to request this dataset.'}
+   Add-Result $definition[0] $definition[1] $s $definition[2] $why; continue
   }
   $id=$definition[1]
   Invoke-ReadCollector $definition[0] $id $definition[2] 'Tenant/site configuration inventory. Site inventory does not enumerate item-level access or prove absence of oversharing.' {
@@ -122,6 +141,41 @@ try {
    elseif ($id -eq 'OneDriveSites') { Get-SPOSite -IncludePersonalSite $true -Limit All -Detailed | Where-Object Template -like 'SPSPERS*' }
    else { Get-SPOSite -Limit All -Detailed }
   }
+ }
+ # Defender for Office 365 configuration uses Exchange Online, independently of Graph and Purview.
+ $defenderReady=$false
+ $defenderCommands=@(
+  'Get-AntiPhishPolicy','Get-AntiPhishRule',
+  'Get-SafeLinksPolicy','Get-SafeLinksRule',
+  'Get-SafeAttachmentPolicy','Get-SafeAttachmentRule',
+  'Get-HostedContentFilterPolicy','Get-HostedContentFilterRule',
+  'Get-MalwareFilterPolicy','Get-MalwareFilterRule',
+  'Get-HostedOutboundSpamFilterPolicy','Get-HostedOutboundSpamFilterRule',
+  'Get-AtpPolicyForO365','Get-ATPProtectionPolicyRule','Get-EOPProtectionPolicyRule'
+ )
+ if ($IncludeDefender) {
+  try {
+   Import-Module ExchangeOnlineManagement -ErrorAction Stop
+   $e=@{ExchangeEnvironmentName=$profile.ExchangeEnvironment;ShowBanner=$false;ErrorAction='Stop'}
+   Set-AssessmentWamOption -Parameters $e -Command 'Connect-ExchangeOnline'
+   if ($Authentication -eq 'Certificate') { $e.AppId=$ClientId; $e.CertificateThumbprint=$CertificateThumbprint; $e.Organization=$Organization }
+   elseif ($AdminUPN) { $e.UserPrincipalName=$AdminUPN }
+   Connect-ExchangeOnline @e | Out-Null
+   $exchangeConnected=$true; $defenderReady=$true
+  } catch {
+   $detail=Add-AssessmentDiagnostic 'DefenderConnection' 'Connect-ExchangeOnline' $_
+   Add-Result 'Connection' 'DefenderConnection' 'Failed' 'Connect-ExchangeOnline' $detail
+  }
+ }
+ foreach ($command in $defenderCommands) {
+  $id='Defender'+$command.Substring(4)
+  if (-not $defenderReady) {
+   $s=if($IncludeDefender){'BlockedByConnection'}else{'NotRequested'}
+   $why=if($IncludeDefender){'Exchange Online connection failed. See DefenderConnection in diagnostics.csv.'}else{'Enable IncludeDefender to request this dataset.'}
+   Add-Result 'Defender' $id $s $command $why
+   continue
+  }
+  Invoke-ReadCollector 'Defender' $id $command 'Defender for Office 365/EOP configuration. Evaluate policies with rules, priorities, recipients, exclusions and preset policies; this is not effectiveness or incident evidence.' { & $command -ErrorAction Stop }
  }
  foreach ($c in @($catalog | Where-Object Kind -eq 'Manual')) {
   $inputFile=if($EvidencePath){Join-Path $EvidencePath ($c.Id+'.csv')}else{$null}
@@ -137,9 +191,10 @@ try {
   } else { Add-Result $c.Workstream $c.Id 'ManualRequired' $c.Source $c.Explanation }
  }
 } finally {
- if ($graphConnected) { Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null }
- if ($exchangeConnected) { Disconnect-ExchangeOnline -Confirm:$false -ErrorAction SilentlyContinue }
- if ($spoConnected) { Disconnect-SPOService -ErrorAction SilentlyContinue }
+ if ($graphConnected) { try { Disconnect-MgGraph -ErrorAction Stop | Out-Null } catch { [void](Add-AssessmentDiagnostic 'GraphDisconnect' 'Disconnect-MgGraph' $_) } }
+ if ($exchangeConnected) { try { Disconnect-ExchangeOnline -Confirm:$false -ErrorAction Stop } catch { [void](Add-AssessmentDiagnostic 'ExchangeDisconnect' 'Disconnect-ExchangeOnline' $_) } }
+ if ($spoConnected) { try { Disconnect-SPOService -ErrorAction Stop } catch { [void](Add-AssessmentDiagnostic 'SharePointDisconnect' 'Disconnect-SPOService' $_) } }
+ Export-SafeCsv -Rows $diagnostics.ToArray() -Path (Join-Path $directory 'diagnostics.csv')
  $manifest.CompletedAtUtc=[datetime]::UtcNow.ToString('o')
  ConvertTo-Json -InputObject $manifest -Depth 30 | Set-Content -LiteralPath (Join-Path $directory 'manifest.json') -Encoding utf8
  Export-SafeCsv -Rows $results.ToArray() -Path (Join-Path $directory 'collection-status.csv')
@@ -154,5 +209,5 @@ try {
   Export-SafeCsv -Rows @($combined) -Path (Join-Path $directory "csv/Workstream-$($group.Name).csv")
  }
  Write-Host "Report: $(Join-Path $directory 'Assessment.html')"
- Write-Host 'Review collection-status.csv. No tenant configuration was changed.'
+ Write-Host 'Review collection-status.csv and diagnostics.csv. No tenant configuration was changed.'
 }
