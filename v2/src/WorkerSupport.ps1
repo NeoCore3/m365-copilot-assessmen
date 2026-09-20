@@ -4,6 +4,7 @@ function Add-WorkerRow($Row) {
 }
 function Invoke-WorkerDataset($Definition,[scriptblock]$Read) {
  $workerRows.Clear();$state='Collected';$note=$Definition.Explanation
+ $script:datasetScope=[ordered]@{RequestedPeriod=$request.Period;MaxPages=$request.MaxPages;MaxRows=$request.MaxRows;MaxItems=$request.MaxItems;EnvironmentUrl=$Definition.EnvironmentUrl;DriveIds=$request.DriveIds}
  try { & $Read | Out-Null }
  catch {
   $state=if($workerRows.Count -or $_.Exception.Message -match 'limit reached|cap reached|limited to the last 30 days'){'Incomplete'}elseif($_.Exception -is [Management.Automation.CommandNotFoundException]){'CommandUnavailable'}else{'Failed'}
@@ -13,5 +14,5 @@ function Invoke-WorkerDataset($Definition,[scriptblock]$Read) {
   if($message.Length -gt 1200){$message=$message.Substring(0,1200)}
   $note+=' '+$message
  }
- $workerResults.Add([pscustomobject]@{Id=$Definition.Id;Workstream=$Definition.Workstream;Source=$Definition.Source;Status=$state;Explanation=$note;Rows=$workerRows.ToArray()})
+ $workerResults.Add([pscustomobject]@{Id=$Definition.Id;Workstream=$Definition.Workstream;Source=$Definition.Source;Status=$state;Explanation=$note;Scope=$script:datasetScope;Rows=$workerRows.ToArray()})
 }

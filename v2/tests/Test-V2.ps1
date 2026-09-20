@@ -9,7 +9,7 @@ Get-ChildItem $root -Recurse -Filter *.ps1|ForEach-Object {$t=$null;$e=$null;[vo
 . (Join-Path $root 'src/Collectors.ps1')
 . (Join-Path $root 'src/WorkerSupport.ps1')
 . (Join-Path $root 'src/Report.ps1')
-$request=[pscustomobject]@{MaxPages=10;MaxRows=100;MaxItems=2;Period='D7';EndUtc='2026-01-08T00:00:00Z'}
+$request=[pscustomobject]@{MaxPages=10;MaxRows=100;MaxItems=2;Period='D7';EndUtc=[datetime]::UtcNow.ToString('o')}
 $workerRows=[Collections.Generic.List[object]]::new();$workerResults=[Collections.Generic.List[object]]::new()
 foreach($uri in @('http://api.fabric.microsoft.com/v1','https://evil.example/v1','https://api.fabric.microsoft.com:444/v1','https://user@api.fabric.microsoft.com/v1','https://api.fabric.microsoft.com/v1#fragment')){Assert-Throws {Assert-ApiUri $uri 'https://api.fabric.microsoft.com'} 'rejected'}
 Assert-ApiUri 'https://api.fabric.microsoft.com/v1/a?x=1' 'https://api.fabric.microsoft.com'

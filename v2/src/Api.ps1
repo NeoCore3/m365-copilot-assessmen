@@ -56,7 +56,11 @@ function Invoke-ApiGet([string]$Uri,[string]$Origin) {
    $status=[int]$_.Exception.Response.StatusCode
    if($status -in @(429,503) -and $attempt -lt 4){
     $delay=[int][math]::Pow(2,$attempt+1)
-    try {$retry=$_.Exception.Response.Headers.RetryAfter.Delta.TotalSeconds;if($retry -gt 0){$delay=[math]::Ceiling($retry)}}catch{}
+    try {
+     $after=$_.Exception.Response.Headers.RetryAfter
+     $retry=if($after.Delta){$after.Delta.TotalSeconds}elseif($after.Date){($after.Date-[datetimeoffset]::UtcNow).TotalSeconds}else{0}
+     if($retry -gt 0){$delay=[math]::Ceiling($retry)}
+    }catch{}
     if($delay -gt 60){throw "HTTP $status requires retry after $delay seconds; rerun later. Partial data is retained."}
     Start-Sleep -Seconds $delay;continue
    }

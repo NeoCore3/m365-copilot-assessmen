@@ -58,6 +58,9 @@ function Read-GraphPages([string]$Path) {
 }
 function Read-Activity([string[]]$Activities) {
  $end=[datetime]::Parse($request.EndUtc).ToUniversalTime();$days=[math]::Min(30,[int]$request.Period.Substring(1));$start=$end.AddDays(-$days)
+ $earliest=[datetime]::UtcNow.AddDays(-30).AddMinutes(1)
+ if($start -lt $earliest){$start=$earliest}
+ $script:datasetScope.StartUtc=$start.ToString('o');$script:datasetScope.EndUtc=$end.ToString('o');$script:datasetScope.Activities=$Activities
  $pages=0
  while($start -lt $end){
   $stop=if($start.AddDays(1) -lt $end){$start.AddDays(1)}else{$end};$cookie=$null;$seen=[Collections.Generic.HashSet[string]]::new()
@@ -80,6 +83,7 @@ function Read-Activity([string[]]$Activities) {
 }
 function Read-Audit {
  $end=[datetime]::Parse($request.EndUtc).ToUniversalTime();$start=$end.AddDays(-[int]$request.Period.Substring(1))
+ $script:datasetScope.StartUtc=$start.ToString('o');$script:datasetScope.EndUtc=$end.ToString('o');$script:datasetScope.Operations=@('CopilotInteraction')
  $ranges=[Collections.Generic.Queue[object]]::new();while($start -lt $end){$stop=if($start.AddDays(1) -lt $end){$start.AddDays(1)}else{$end};$ranges.Enqueue(@($start,$stop));$start=$stop}
  $seen=[Collections.Generic.HashSet[string]]::new();$pages=0
  while($ranges.Count){
@@ -152,7 +156,7 @@ function Read-WorkerDataset($d) {
   'Api' {Read-ApiPages $d.Path $d.Field $d.SkipPageSize}
   'Graph' {Read-GraphPages $d.Path}
   'CopilotV2' {
-   $period=if($request.Period -eq 'D30'){'D28'}else{$request.Period};$tmp=Join-Path ([IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString()+'.csv')
+   $period=if($request.Period -eq 'D30'){'D28'}else{$request.Period};$script:datasetScope.EffectivePeriod=$period;$tmp=Join-Path ([IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString()+'.csv')
    try {
     Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/v1.0/copilot/reports/getMicrosoft365CopilotUsageUserDetail(period='$period',version='v2')" -OutputFilePath $tmp -ErrorAction Stop|Out-Null
     if(-not (Test-Path $tmp) -or (Get-Item $tmp).Length -eq 0){throw 'Copilot usage API returned no report body.'}

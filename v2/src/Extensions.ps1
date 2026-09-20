@@ -33,6 +33,7 @@ function Invoke-AssessmentExtensions {
    if($actual.Count -ne $expected.Count -or @($actual|Select-Object -Unique).Count -ne $actual.Count -or @($actual|Where-Object {$_ -notin $expected}).Count){throw 'Worker dataset mismatch.'}
    foreach($r in $data.Results){
     Add-Result $r.Workstream $r.Id $r.Status $r.Source $r.Explanation @($r.Rows)
+    if($r.Scope){$results[$results.Count-1]|Add-Member -NotePropertyName Scope -NotePropertyValue $r.Scope}
     if($r.Status -in @('Failed','Incomplete','BlockedByConnection','CommandUnavailable')){
      $diagnostics.Add([pscustomobject]@{Id=$r.Id;Source=$r.Source;Category=$r.Status;Message=$r.Explanation;CollectedAtUtc=[datetime]::UtcNow.ToString('o')})
     }

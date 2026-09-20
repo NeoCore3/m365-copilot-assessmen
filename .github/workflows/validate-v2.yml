@@ -12,6 +12,9 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 15
     steps:
+      - name: Preserve repository bytes on Windows checkout
+        shell: pwsh
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
       - name: Validate original toolkit regressions
         shell: pwsh
