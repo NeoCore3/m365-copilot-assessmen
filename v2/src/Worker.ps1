@@ -12,9 +12,7 @@ $workerRows=[Collections.Generic.List[object]]::new()
 try {
  try { Connect-Worker }
  catch {
-  $reason=$_.Exception.Message
-  # Connection errors can contain module internals; use a bounded, token-redacted message.
-  $reason=$reason -replace 'eyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+','[redacted token]'
+  $reason=Protect-AssessmentDiagnostic $_.Exception.Message
   if($reason.Length -gt 1200){$reason=$reason.Substring(0,1200)}
   foreach($d in $request.Definitions){$workerResults.Add([pscustomobject]@{Id=$d.Id;Workstream=$d.Workstream;Source=$d.Source;Status='BlockedByConnection';Explanation="Connection failed: $reason";Rows=@()})}
  }

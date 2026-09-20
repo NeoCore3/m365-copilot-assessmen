@@ -31,6 +31,8 @@ Invoke-WorkerDataset $d {Add-WorkerRow ([pscustomobject]@{id=1});throw 'HTTP 403
 Assert ($workerResults[-1].Status -eq 'Incomplete' -and $workerResults[-1].Rows.Count -eq 1) 'Partial data survives failure'
 Invoke-WorkerDataset $d {throw 'Access denied'}
 Assert ($workerResults[-1].Status -eq 'Failed' -and $workerResults[-1].Rows.Count -eq 0) 'Failed query not empty success'
+Invoke-WorkerDataset $d {throw 'access_token=opaque-secret client_assertion=signed-secret Bearer bearer-secret'}
+Assert ($workerResults[-1].Explanation -notmatch 'opaque-secret|signed-secret|bearer-secret') 'Opaque credentials redacted'
 Invoke-WorkerDataset $d {}
 Assert ($workerResults[-1].Status -eq 'Collected' -and $workerResults[-1].Rows.Count -eq 0) 'Valid empty collection'
 $request.MaxRows=1
