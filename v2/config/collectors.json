@@ -1,0 +1,255 @@
+[
+  {
+    "Workstream": "Licensing",
+    "Id": "Organization",
+    "Path": "/v1.0/organization",
+    "Permission": "Organization.Read.All",
+    "Explanation": "Tenant identity and organization settings.",
+    "Kind": "Graph"
+  },
+  {
+    "Workstream": "Licensing",
+    "Id": "Licenses",
+    "Path": "/v1.0/subscribedSkus",
+    "Permission": "LicenseAssignment.Read.All",
+    "Explanation": "Subscription SKU and service-plan inventory; consumed units describe assignment, not usage.",
+    "Kind": "Graph"
+  },
+  {
+    "Workstream": "Licensing",
+    "Id": "UserAssignments",
+    "Path": "/v1.0/users?$select=id,displayName,userPrincipalName,accountEnabled,assignedLicenses,assignedPlans,licenseAssignmentStates&$top=999",
+    "Permission": "User.Read.All",
+    "Explanation": "Per-user licenses, plan states and assignment provenance. Do not infer inactivity from assignment.",
+    "Kind": "Graph"
+  },
+  {
+    "Workstream": "Identity",
+    "Id": "ConditionalAccess",
+    "Path": "/v1.0/identity/conditionalAccess/policies",
+    "Permission": "Policy.Read.All",
+    "Explanation": "Review policy state, inclusions, exclusions and grants. Existence alone does not prove effective coverage.",
+    "Kind": "Graph"
+  },
+  {
+    "Workstream": "Identity",
+    "Id": "SecurityDefaults",
+    "Path": "/v1.0/policies/identitySecurityDefaultsEnforcementPolicy",
+    "Permission": "Policy.Read.All",
+    "Explanation": "Security defaults configuration; correlate with Conditional Access.",
+    "Kind": "Graph"
+  },
+  {
+    "Workstream": "Agents",
+    "Id": "ServicePrincipals",
+    "Path": "/v1.0/servicePrincipals?$select=id,appId,displayName,servicePrincipalType,accountEnabled,tags&$top=999",
+    "Permission": "Application.Read.All",
+    "Explanation": "Entra enterprise application inventory only. This is not a complete agent inventory and must not be counted as agents.",
+    "Kind": "Graph"
+  },
+  {
+    "Workstream": "Defender",
+    "Id": "SecureScores",
+    "Path": "/v1.0/security/secureScores?$top=1",
+    "Permission": "SecurityEvents.Read.All",
+    "Explanation": "Latest Secure Score snapshot; not a complete Defender configuration assessment.",
+    "Kind": "Graph"
+  },
+  {
+    "Workstream": "Defender",
+    "Id": "SecureScoreControls",
+    "Path": "/v1.0/security/secureScoreControlProfiles",
+    "Permission": "SecurityEvents.Read.All",
+    "Explanation": "Microsoft control descriptions and remediation guidance. Correlate control IDs with scores.",
+    "Kind": "Graph"
+  },
+  {
+    "Workstream": "SharePoint",
+    "Id": "GraphSharePointSettings",
+    "Path": "/v1.0/admin/sharepoint/settings",
+    "Permission": "SharePointTenantSettings.Read.All",
+    "Explanation": "Graph tenant sharing and security settings; supplement with SPO tenant and site exports.",
+    "Kind": "Graph"
+  },
+  {
+    "Workstream": "Teams",
+    "Id": "TeamsUsage",
+    "Path": "/v1.0/reports/getTeamsUserActivityUserDetail(period='{period}')",
+    "Permission": "Reports.Read.All",
+    "Explanation": "Usage report for the selected window. Retain source refresh date; concealed identifiers cannot be reliably joined to user assignments.",
+    "Kind": "Csv"
+  },
+  {
+    "Workstream": "SharePoint",
+    "Id": "SharePointUsage",
+    "Path": "/v1.0/reports/getSharePointSiteUsageDetail(period='{period}')",
+    "Permission": "Reports.Read.All",
+    "Explanation": "Usage report for the selected window. Retain source refresh date; concealed identifiers cannot be reliably joined to user assignments.",
+    "Kind": "Csv"
+  },
+  {
+    "Workstream": "OneDrive",
+    "Id": "OneDriveUsage",
+    "Path": "/v1.0/reports/getOneDriveUsageAccountDetail(period='{period}')",
+    "Permission": "Reports.Read.All",
+    "Explanation": "Usage report for the selected window. Retain source refresh date; concealed identifiers cannot be reliably joined to user assignments.",
+    "Kind": "Csv"
+  },
+  {
+    "Workstream": "Licensing",
+    "Id": "M365ActiveUsers",
+    "Path": "/v1.0/reports/getOffice365ActiveUserDetail(period='{period}')",
+    "Permission": "Reports.Read.All",
+    "Explanation": "Usage report for the selected window. Retain source refresh date; concealed identifiers cannot be reliably joined to user assignments.",
+    "Kind": "Csv"
+  },
+  {
+    "Workstream": "Copilot",
+    "Id": "CopilotLicensedUsage",
+    "Path": "/v1.0/copilot/reports/getMicrosoft365CopilotUsageUserDetail(period='{period}',version='v1')",
+    "Permission": "Reports.Read.All",
+    "Explanation": "Licensed Microsoft 365 Copilot activity, report v1. This does not include unlicensed Chat usage or prompt counts. GCC High API is not supported.",
+    "Kind": "Csv",
+    "GlobalOnly": true
+  },
+  {
+    "Workstream": "Copilot",
+    "Id": "CopilotChat",
+    "Source": "Microsoft 365 admin center > Reports > Usage > Copilot Chat",
+    "Explanation": "Export unlicensed Chat usage, refresh date, period, active users and prompts. Do not merge with licensed usage without validated identities and matching windows.",
+    "Kind": "Manual"
+  },
+  {
+    "Workstream": "Copilot",
+    "Id": "CopilotOptimization",
+    "Source": "Microsoft 365 admin center > Copilot",
+    "Explanation": "Capture configuration and optimization recommendations, web grounding controls, agents, connectors and rollout scope.",
+    "Kind": "Manual"
+  },
+  {
+    "Workstream": "Copilot",
+    "Id": "CopilotPrompts",
+    "Source": "Microsoft 365 admin center > Reports > Usage > Microsoft 365 Copilot",
+    "Explanation": "Export prompt and active-day metrics with the exact reporting window; the automated v1 report is activity-date based.",
+    "Kind": "Manual"
+  },
+  {
+    "Workstream": "SharePoint",
+    "Id": "DataAccessGovernance",
+    "Source": "SharePoint admin center > Reports > Data access governance",
+    "Explanation": "Export EEEU, sharing links, permissions and sensitivity reports. Preserve report scope, generated date and denominator; configuration inventory is not an ACL scan.",
+    "Kind": "Manual"
+  },
+  {
+    "Workstream": "SharePoint",
+    "Id": "AdvancedManagement",
+    "Source": "SharePoint admin center > SharePoint Advanced Management",
+    "Explanation": "Export lifecycle policies, inactive sites, ownership, restricted access/content discovery and site access review evidence.",
+    "Kind": "Manual"
+  },
+  {
+    "Workstream": "OneDrive",
+    "Id": "OneDrivePermissions",
+    "Source": "SharePoint data access governance / approved permissions assessment",
+    "Explanation": "Export unique permissions, external access, broad grants and sharing links. Broken inheritance does not by itself prove oversharing.",
+    "Kind": "Manual"
+  },
+  {
+    "Workstream": "Purview",
+    "Id": "AuditEvidence",
+    "Source": "Microsoft Purview > Audit",
+    "Explanation": "Confirm audit ingestion, licensing, retention and sample Copilot events; configuration alone does not verify event ingestion.",
+    "Kind": "Manual"
+  },
+  {
+    "Workstream": "Purview",
+    "Id": "DlpEffectiveness",
+    "Source": "Microsoft Purview > Data Loss Prevention",
+    "Explanation": "Export policy scope, simulation/enforcement and sensitive interaction outcomes. A zero blocked count does not independently prove policy failure.",
+    "Kind": "Manual"
+  },
+  {
+    "Workstream": "Purview",
+    "Id": "DSPMForAI",
+    "Source": "Microsoft Purview > DSPM for AI",
+    "Explanation": "Export settings, sensitive AI interactions, policy coverage, recommendations and assessed population.",
+    "Kind": "Manual"
+  },
+  {
+    "Workstream": "Purview",
+    "Id": "DSPM",
+    "Source": "Microsoft Purview > DSPM",
+    "Explanation": "Export posture, recommendations, assessments and coverage denominators.",
+    "Kind": "Manual"
+  },
+  {
+    "Workstream": "Purview",
+    "Id": "ComplianceManager",
+    "Source": "Microsoft Purview > Compliance Manager",
+    "Explanation": "Export assessments, improvement actions, score and ownership; document scoring scope.",
+    "Kind": "Manual"
+  },
+  {
+    "Workstream": "Purview",
+    "Id": "InsiderRisk",
+    "Source": "Microsoft Purview > Insider Risk Management",
+    "Explanation": "Export policy scope and analytics status through an authorized reviewer; exclude case content and personal investigation details.",
+    "Kind": "Manual"
+  },
+  {
+    "Workstream": "Defender",
+    "Id": "DefenderConfiguration",
+    "Source": "Microsoft Defender portal",
+    "Explanation": "Export workload settings, recommendations, exposure management and security posture. Secure Score is only a subset.",
+    "Kind": "Manual"
+  },
+  {
+    "Workstream": "SecurityCopilot",
+    "Id": "SecurityCopilotConfiguration",
+    "Source": "Microsoft Security Copilot administration",
+    "Explanation": "Capture capacity, roles, plugins, connections, data access, audit and enabled integrations.",
+    "Kind": "Manual"
+  },
+  {
+    "Workstream": "Agents",
+    "Id": "AgentInventory",
+    "Source": "Microsoft 365 admin center > Agents; Copilot Studio",
+    "Explanation": "Export actual agents, owners, publishers, activity, permissions, connectors, knowledge sources and review status.",
+    "Kind": "Manual"
+  },
+  {
+    "Workstream": "CopilotStudio",
+    "Id": "CopilotStudioSecurity",
+    "Source": "Copilot Studio and Power Platform admin center",
+    "Explanation": "Export authentication, publication, channel scope, environment access, connector policies and agent analytics.",
+    "Kind": "Manual"
+  },
+  {
+    "Workstream": "PowerPlatform",
+    "Id": "PowerPlatformConfiguration",
+    "Source": "Power Platform admin center",
+    "Explanation": "Export tenant settings, environments, apps, flows, DLP policies, connectors, capacity, security groups and usage.",
+    "Kind": "Manual"
+  },
+  {
+    "Workstream": "Fabric",
+    "Id": "FabricConfigurationUsage",
+    "Source": "Fabric admin portal and capacity metrics",
+    "Explanation": "Export tenant settings, capacities, workspaces, sharing, Copilot enablement, security and usage. Preserve capacity/workspace scope.",
+    "Kind": "Manual"
+  },
+  {
+    "Workstream": "Teams",
+    "Id": "TeamsPolicies",
+    "Source": "Teams admin center",
+    "Explanation": "Export app permission/setup policies, meeting policies, transcription, recording, external/federation and guest settings.",
+    "Kind": "Manual"
+  },
+  {
+    "Workstream": "Governance",
+    "Id": "ExpansionGates",
+    "Source": "Customer governance workshop",
+    "Explanation": "Document governance board, acceptable use, owners, license optimization, security tests, rollout cohorts and measurable gates.",
+    "Kind": "Manual"
+  }
+]
