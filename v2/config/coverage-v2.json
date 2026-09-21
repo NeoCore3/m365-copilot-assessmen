@@ -1,0 +1,180 @@
+[
+  {
+    "Group": "CopilotChat",
+    "Datasets": [
+      "CopilotAuditActivity"
+    ],
+    "Remaining": "Unlicensed Chat portal totals still need evidence; audit events cannot be classified by historical licensing from current license assignments."
+  },
+  {
+    "Group": "CopilotOptimization",
+    "Datasets": [
+      "LicenseAllocationIndicators",
+      "CopilotLicensedUsageV2"
+    ],
+    "Remaining": "Review identity matching, reporting windows, manager decisions and portal recommendations."
+  },
+  {
+    "Group": "CopilotPrompts",
+    "Datasets": [
+      "CopilotLicensedUsageV2"
+    ],
+    "Remaining": "Licensed report counts only; prompts content and populations outside this report are not collected."
+  },
+  {
+    "Group": "DataAccessGovernance",
+    "Datasets": [
+      "DAGSharePointEveryone",
+      "DAGSharePointEveryoneExceptExternalUsers",
+      "DAGSharePointEveryoneExceptExternalUsersAtSite",
+      "DAGSharePointEveryoneExceptExternalUsersForItems",
+      "DAGSharePointPermissionedUsers",
+      "DAGSharePointPermissionsReport",
+      "DAGSharePointSensitivityLabelForFiles",
+      "DAGSharePointSharingLinks_Anyone",
+      "DAGSharePointSharingLinks_Guests",
+      "DAGSharePointSharingLinks_PeopleInYourOrg"
+    ],
+    "Remaining": "Generate missing reports in the admin center and review downloaded artifacts against the desired sites and report dates."
+  },
+  {
+    "Group": "AdvancedManagement",
+    "Datasets": [
+      "SharePointTenant",
+      "SharePointSites",
+      "SiteAccessReviews"
+    ],
+    "Remaining": "Review remaining SAM lifecycle controls and remediation outcomes; these datasets do not represent every SAM feature."
+  },
+  {
+    "Group": "OneDrivePermissions",
+    "Datasets": [
+      "DAGOneDriveForBusinessEveryone",
+      "DAGOneDriveForBusinessEveryoneExceptExternalUsers",
+      "DAGOneDriveForBusinessEveryoneExceptExternalUsersAtSite",
+      "DAGOneDriveForBusinessEveryoneExceptExternalUsersForItems",
+      "DAGOneDriveForBusinessPermissionedUsers",
+      "DAGOneDriveForBusinessPermissionsReport",
+      "DAGOneDriveForBusinessSensitivityLabelForFiles",
+      "DAGOneDriveForBusinessSharingLinks_Anyone",
+      "DAGOneDriveForBusinessSharingLinks_Guests",
+      "DAGOneDriveForBusinessSharingLinks_PeopleInYourOrg",
+      "ScopedItemPermissions"
+    ],
+    "Remaining": "Review full ACL/inheritance and exposure outside selected drives and DAG scopes."
+  },
+  {
+    "Group": "AuditEvidence",
+    "Datasets": [
+      "CopilotAuditActivity"
+    ],
+    "Remaining": "Verify audit configuration, ingestion and retention separately; this is a CopilotInteraction search only."
+  },
+  {
+    "Group": "DlpEffectiveness",
+    "Datasets": [
+      "DlpPolicies",
+      "DlpRules",
+      "DlpActivityMetadata"
+    ],
+    "Remaining": "Controlled enforcement tests, policy scope and exclusions require human validation."
+  },
+  {
+    "Group": "DSPMForAI",
+    "Datasets": [
+      "AIActivityMetadata",
+      "DlpActivityMetadata",
+      "SensitivityLabels"
+    ],
+    "Remaining": "Native DSPM for AI recommendations/assessments are not reproduced; use dashboard evidence."
+  },
+  {
+    "Group": "DSPM",
+    "Datasets": [
+      "DlpPolicies",
+      "SensitivityLabels",
+      "SharePointTenant"
+    ],
+    "Remaining": "Configuration references only; native DSPM posture assessment remains unimplemented."
+  },
+  {
+    "Group": "ComplianceManager",
+    "Datasets": [],
+    "Remaining": "Full Compliance Manager assessment export remains unimplemented; supply authorized evidence."
+  },
+  {
+    "Group": "InsiderRisk",
+    "Datasets": [],
+    "Remaining": "Insider Risk configuration and analytics export remains unimplemented; supply authorized evidence."
+  },
+  {
+    "Group": "DefenderConfiguration",
+    "Datasets": [
+      "EndpointRecommendations",
+      "DefenderAntiPhishPolicy",
+      "DefenderSafeLinksPolicy",
+      "DefenderSafeAttachmentPolicy"
+    ],
+    "Remaining": "Other XDR workloads and enforcement outcomes need separate evidence; retained baseline collects all 15 MDO/EOP datasets."
+  },
+  {
+    "Group": "SecurityCopilotConfiguration",
+    "Datasets": [],
+    "Remaining": "Full Security Copilot configuration export remains unimplemented; supply authorized evidence."
+  },
+  {
+    "Group": "AgentInventory",
+    "Datasets": [
+      "AgentRegistryPreview",
+      "DataverseBots"
+    ],
+    "Remaining": "Inventory covers registered agents and explicitly selected Dataverse environments only."
+  },
+  {
+    "Group": "CopilotStudioSecurity",
+    "Datasets": [
+      "DataverseBots"
+    ],
+    "Remaining": "Review connectors, knowledge sources, publication scope and effective access beyond returned bot fields."
+  },
+  {
+    "Group": "PowerPlatformConfiguration",
+    "Datasets": [
+      "PowerPlatformEnvironments",
+      "PowerPlatformApps",
+      "PowerPlatformDlpPolicies",
+      "PowerPlatformTenantSettings",
+      "PowerPlatformFlows"
+    ],
+    "Remaining": "Capacity, effective permissions, connector usage and additional environment controls need evidence."
+  },
+  {
+    "Group": "FabricConfigurationUsage",
+    "Datasets": [
+      "FabricTenantSettings",
+      "FabricWorkspaces",
+      "FabricAccessibleCapacities"
+    ],
+    "Remaining": "Item permissions, usage, overrides and capacities inaccessible to the caller need separate evidence."
+  },
+  {
+    "Group": "TeamsPolicies",
+    "Datasets": [
+      "TeamsCsTeamsMeetingPolicy",
+      "TeamsCsTenantFederationConfiguration",
+      "TeamsCsTeamsClientConfiguration",
+      "TeamsCsTeamsGuestMessagingConfiguration",
+      "TeamsCsTeamsGuestMeetingConfiguration",
+      "TeamsCsTeamsAppSetupPolicy",
+      "TeamsCsTeamsAppPermissionPolicy"
+    ],
+    "Remaining": "Effective assignments, app-centric controls and policy outcomes need separate evidence."
+  },
+  {
+    "Group": "ExpansionGates",
+    "Datasets": [
+      "ExpansionEvidenceIndex"
+    ],
+    "Remaining": "Business/control owners must approve each gate; evidence references are not approvals."
+  }
+]

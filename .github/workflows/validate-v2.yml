@@ -1,0 +1,27 @@
+name: Validate assessment v2
+on:
+  push:
+    branches: [feature/assessment-toolkit-v2]
+  pull_request:
+    paths: ['v2/**', '.github/workflows/validate-v2.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows-validation:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Preserve repository bytes on Windows checkout
+        shell: pwsh
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+      - name: Validate original toolkit regressions
+        shell: pwsh
+        run: ./tests/Test-Toolkit.ps1
+      - name: Validate v2 collectors offline
+        shell: pwsh
+        run: ./v2/tests/Test-V2.ps1
+      - name: Verify preservation and six v2 launchers offline
+        shell: pwsh
+        run: ./v2/tests/Test-Integration.ps1
