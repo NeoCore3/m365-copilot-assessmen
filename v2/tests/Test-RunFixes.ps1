@@ -50,4 +50,16 @@ $catalog=@(Get-Content (Join-Path $root 'config/extensions.json') -Raw|ConvertFr
 Check (@($catalog|Where-Object {$_.Entity -eq 'SensitivityLabelForFiles' -and $_.SpoWorkload -eq 'OneDriveForBusiness'}).Count -eq 0) 'Unsupported OneDrive sensitivity query exists'
 Check (@($catalog|Where-Object {$_.Entity -in @('Everyone','EveryoneExceptExternalUsers')}).Count -eq 2) 'Duplicate combined-workload DAG queries'
 Check (@($catalog|Where-Object CoreSPO).Count -eq 3) 'Core SPO not routed to isolated worker'
+$temp=Join-Path ([IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString())
+try {
+ $exe=Join-Path $PSHOME $(if($IsWindows){'pwsh.exe'}else{'pwsh'})
+ & $exe -NoProfile -File (Join-Path $root 'Commercial/Start-Interactive.ps1') -TenantId '00000000-0000-0000-0000-000000000001' -CustomerName 'Offline' -OutputRoot $temp -ExtensionsOnly|Out-Null
+ Check ($LASTEXITCODE -eq 0) 'ExtensionsOnly launcher failed'
+ $manifest=Get-ChildItem $temp -Recurse -Filter manifest.json|Select-Object -First 1
+ $m=Get-Content $manifest.FullName -Raw|ConvertFrom-Json
+ Check (@($m.Results|Where-Object Id -eq 'GraphConnection').Count -eq 0) 'ExtensionsOnly attempted core Graph'
+ Check (@($m.Results|Where-Object Id -eq 'UserAssignments').Count -eq 0) 'ExtensionsOnly reran directory inventory'
+ $copilot=$m.Results|Where-Object Id -eq 'CopilotLicensedUsageV2'
+ Check ($copilot.Status -eq 'NotRequested' -and $copilot.Explanation -notmatch 'Enable -Always') 'ExtensionsOnly copilot skip guidance incorrect'
+}finally{if(Test-Path $temp){Remove-Item $temp -Recurse -Force}}
 Write-Host "Run-defect regression checks passed: $checks; time zone: $([TimeZoneInfo]::Local.Id)"

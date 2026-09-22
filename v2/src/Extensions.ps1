@@ -14,7 +14,10 @@ function Invoke-AssessmentExtensions {
  foreach($d in $definitions){
   if($d.CoreSPO -and $Cloud -ne 'Commercial'){continue}
   $requested=($d.Switch -eq 'Always' -and -not $ExtensionsOnly) -or [bool](Get-Variable -Name $d.Switch -ValueOnly -ErrorAction SilentlyContinue)
-  if(-not $requested){Add-Result $d.Workstream $d.Id 'NotRequested' $d.Source ("Enable -$($d.Switch). "+$d.Explanation);continue}
+  if(-not $requested){
+   $hint=if($d.Switch -eq 'Always'){'Omitted by ExtensionsOnly; run without ExtensionsOnly to collect this dataset. '}else{"Enable -$($d.Switch). "}
+   Add-Result $d.Workstream $d.Id 'NotRequested' $d.Source ($hint+$d.Explanation);continue
+  }
   if($d.NotApplicableReason){Add-Result $d.Workstream $d.Id 'NotApplicable' $d.Source $d.NotApplicableReason;continue}
   if($Cloud -ne 'Commercial'){Add-Result $d.Workstream $d.Id 'CapabilityUnverified' $d.Source 'This new collector has not been verified for GCC/GCC High. No Commercial endpoint was called. Original cloud-aware collectors still run.';continue}
   if($Authentication -eq 'Certificate' -and -not $d.Certificate){Add-Result $d.Workstream $d.Id 'AuthenticationUnverified' $d.Source 'This collector currently supports interactive mode only; certificate command-level support has not been verified. It will not prompt during an unattended run.';continue}
