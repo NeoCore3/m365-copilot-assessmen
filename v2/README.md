@@ -1,7 +1,8 @@
 # Microsoft 365 assessment toolkit — version 2 preview
 
-Version **2.0.0-preview.1** adds optional evidence collectors in a self-contained `v2/` folder. The working scripts at the repository root remain unchanged from commit `dc684d38c8ab5f2b73f8a388178f6ef89826c72d`.
+Version **2.0.0-preview.2** adds optional evidence collectors in a self-contained `v2/` folder. The working scripts at the repository root remain unchanged from commit `dc684d38c8ab5f2b73f8a388178f6ef89826c72d`.
 
+- [Preview.2 fixes and troubleshooting commands](docs/REPAIR-PREVIEW2.md)
 - [Setup, exact switches, permissions and one-line commands](docs/SETUP-V2.md)
 - [Changes and remaining evidence for all 20 original manual categories](docs/COVERAGE-V2.md)
 - [Retained core permissions](docs/SETUP.md)

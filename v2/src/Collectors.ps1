@@ -1,3 +1,4 @@
+. (Join-Path $PSScriptRoot 'EvidenceQuality.ps1')
 function Connect-Worker {
  switch($request.Workload){
   'Fabric' {Connect-AssessmentApi 'https://api.fabric.microsoft.com' @('https://api.fabric.microsoft.com/Tenant.Read.All','https://api.fabric.microsoft.com/Capacity.Read.All')}
@@ -30,16 +31,13 @@ function Connect-Worker {
   }
   'Teams' {
    Import-Module MicrosoftTeams -ErrorAction Stop
-   $p=@{TenantId=$request.TenantId;ErrorAction='Stop'}
-   if($request.Authentication -eq 'Certificate'){$p.ApplicationId=$request.ClientId;$p.CertificateThumbprint=$request.CertificateThumbprint}
-   if($request.DisableWAM -and $request.Authentication -eq 'Interactive'){
-    if(-not (Get-Command Connect-MicrosoftTeams).Parameters.ContainsKey('DisableWAM')){throw 'Update MicrosoftTeams to use DisableWAM.'};$p.DisableWAM=$true
-   }
+   $p=Get-AssessmentTeamsParameters (Get-Command Connect-MicrosoftTeams) $request
    $ctx=Connect-MicrosoftTeams @p
    if($ctx.TenantId -and $ctx.TenantId -ne $request.TenantId){throw 'Teams tenant mismatch.'}
   }
   'PowerPlatform' {
-   Import-Module Microsoft.PowerApps.Administration.PowerShell -UseWindowsPowerShell -ErrorAction Stop
+   try {Import-Module Microsoft.PowerApps.Administration.PowerShell -UseWindowsPowerShell -ErrorAction Stop}
+   catch {throw 'Power Platform module is unavailable in Windows PowerShell 5.1. Open powershell.exe as the same Windows user and run: Install-Module Microsoft.PowerApps.Administration.PowerShell -Scope CurrentUser; Install-Module Microsoft.PowerApps.PowerShell -Scope CurrentUser -AllowClobber. Then restart pwsh. No tenant role can fix a missing local module.'}
    Add-PowerAppsAccount -Endpoint prod -TenantID $request.TenantId -ErrorAction Stop|Out-Null
   }
   default {throw 'Unknown worker workload.'}
@@ -57,8 +55,10 @@ function Read-GraphPages([string]$Path) {
  }
 }
 function Read-Activity([string[]]$Activities) {
- $end=[datetime]::Parse($request.EndUtc).ToUniversalTime();$days=[math]::Min(30,[int]$request.Period.Substring(1));$start=$end.AddDays(-$days)
- $earliest=[datetime]::UtcNow.AddDays(-30).AddMinutes(1)
+ $end=(ConvertTo-AssessmentUtc $request.EndUtc);$days=[math]::Min(30,[int]$request.Period.Substring(1));$start=$end.AddDays(-$days)
+ $earliest=[datetime]::UtcNow.AddDays(-30).AddMinutes(5)
+ if($end -gt [datetime]::UtcNow){throw 'Requested activity end is in the future.'}
+ $seenEvents=[Collections.Generic.HashSet[string]]::new()
  if($start -lt $earliest){$start=$earliest}
  $script:datasetScope.StartUtc=$start.ToString('o');$script:datasetScope.EndUtc=$end.ToString('o');$script:datasetScope.Activities=$Activities
  $pages=0
@@ -72,7 +72,8 @@ function Read-Activity([string[]]$Activities) {
    if($null -eq $r.LastPage -or $null -eq $r.ResultData){throw 'Activity Explorer returned an unexpected response.'}
    foreach($row in @($r.ResultData|ConvertFrom-Json)){
     # Metadata only. Prompt/response text, file contents and arbitrary nested properties are excluded.
-    Add-WorkerRow ($row|Select-Object Identity,Id,CreationTime,Activity,Operation,Workload,User,UserId,Application,CopilotAppHost,CopilotType,PolicyName,PolicyId,PolicyRuleName,PolicyRuleId,EnforcementMode,PolicyMode,SensitivityLabel,IsProtected)
+    if($row.RecordIdentity -and -not $seenEvents.Add([string]$row.RecordIdentity)){continue}
+    Add-WorkerRow (ConvertTo-ActivityMetadata $row)
    }
    $last=[string]$r.LastPage -eq 'True';$cookie=$r.Watermark
    if(-not $last -and (-not $cookie -or -not $seen.Add($cookie))){throw 'Missing or repeated Activity Explorer continuation.'}
@@ -82,7 +83,7 @@ function Read-Activity([string[]]$Activities) {
  if([int]$request.Period.Substring(1) -gt 30){throw 'Activity Explorer is limited to the last 30 days; the requested reporting period is longer.'}
 }
 function Read-Audit {
- $end=[datetime]::Parse($request.EndUtc).ToUniversalTime();$start=$end.AddDays(-[int]$request.Period.Substring(1))
+ $end=(ConvertTo-AssessmentUtc $request.EndUtc);$start=$end.AddDays(-[int]$request.Period.Substring(1))
  $script:datasetScope.StartUtc=$start.ToString('o');$script:datasetScope.EndUtc=$end.ToString('o');$script:datasetScope.Operations=@('CopilotInteraction')
  $ranges=[Collections.Generic.Queue[object]]::new();while($start -lt $end){$stop=if($start.AddDays(1) -lt $end){$start.AddDays(1)}else{$end};$ranges.Enqueue(@($start,$stop));$start=$stop}
  $seen=[Collections.Generic.HashSet[string]]::new();$pages=0
@@ -107,8 +108,10 @@ function Read-Audit {
  }
 }
 function Read-Dag($Definition) {
- $reports=@(Get-SPODataAccessGovernanceInsight -ReportEntity $Definition.Entity -Workload $Definition.SpoWorkload -ErrorAction Stop)
- if(-not $reports.Count){throw 'No existing DAG report returned. Generate the required report in SharePoint admin center, then rerun.'}
+ $dagParameters=@{ReportEntity=$Definition.Entity;ErrorAction='Stop'}
+ if($Definition.SpoWorkload -ne 'Both'){$dagParameters.Workload=$Definition.SpoWorkload}
+ $reports=@(Get-SPODataAccessGovernanceInsight @dagParameters)
+ if(-not $reports.Count){$script:datasetStatus='NoExistingReport';$script:datasetNote='The service returned no existing report for this query. This is not an access-denied result. Check report scope, generation and retention in SharePoint admin center; this run creates no reports.';return}
  $incomplete=$false
  foreach($report in $reports){
   $status=[string]$report.Status;$id=[string]$report.ReportId;$files=@();$export='NotReady'
@@ -170,6 +173,8 @@ function Read-WorkerDataset($d) {
   'Activity' {Read-Activity $d.Activities}
   'Audit' {Read-Audit}
   'Dag' {Read-Dag $d}
+  'SPOSites' {foreach($row in @(Get-SPOSite -Limit All -Detailed -ErrorAction Stop)){Add-WorkerRow ($row|Select-Object -Property (@('Url','Owner','Title','Template','Status')+@($row.PSObject.Properties.Name|Where-Object {$_ -notin @('Url','Owner','Title','Template','Status')})))}}
+  'ODSites' {foreach($row in @(Get-SPOSite -IncludePersonalSite $true -Limit All -Detailed -ErrorAction Stop|Where-Object Template -like 'SPSPERS*')){Add-WorkerRow ($row|Select-Object -Property (@('Url','Owner','Title','Template','Status')+@($row.PSObject.Properties.Name|Where-Object {$_ -notin @('Url','Owner','Title','Template','Status')})))}}
   'SiteReviews' {foreach($row in @(Get-SPOSiteReview -ReportEntity All -ErrorAction Stop)){Add-WorkerRow $row}}
   'Items' {Read-Items}
   'Bots' {

@@ -24,8 +24,8 @@
   {
     "Group": "DataAccessGovernance",
     "Datasets": [
-      "DAGSharePointEveryone",
-      "DAGSharePointEveryoneExceptExternalUsers",
+      "DAGBothEveryone",
+      "DAGBothEveryoneExceptExternalUsers",
       "DAGSharePointEveryoneExceptExternalUsersAtSite",
       "DAGSharePointEveryoneExceptExternalUsersForItems",
       "DAGSharePointPermissionedUsers",
@@ -49,13 +49,12 @@
   {
     "Group": "OneDrivePermissions",
     "Datasets": [
-      "DAGOneDriveForBusinessEveryone",
-      "DAGOneDriveForBusinessEveryoneExceptExternalUsers",
+      "DAGBothEveryone",
+      "DAGBothEveryoneExceptExternalUsers",
       "DAGOneDriveForBusinessEveryoneExceptExternalUsersAtSite",
       "DAGOneDriveForBusinessEveryoneExceptExternalUsersForItems",
       "DAGOneDriveForBusinessPermissionedUsers",
       "DAGOneDriveForBusinessPermissionsReport",
-      "DAGOneDriveForBusinessSensitivityLabelForFiles",
       "DAGOneDriveForBusinessSharingLinks_Anyone",
       "DAGOneDriveForBusinessSharingLinks_Guests",
       "DAGOneDriveForBusinessSharingLinks_PeopleInYourOrg",

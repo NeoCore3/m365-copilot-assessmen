@@ -45,6 +45,15 @@ function Write-AssessmentReport {
   [void]$h.Append("<span>$(ConvertTo-HtmlText $g.Name)</span><div class='bar' style='width:$pct%' role='img' aria-label='$pct percent'></div><span>$($g.Count)</span>")
  }
  [void]$h.Append('</div></section>')
+ $qualityPath=Join-Path $Directory 'raw/ReportIdentityQuality.json'
+ if(Test-Path -LiteralPath $qualityPath){
+  $quality=@(Get-Content -LiteralPath $qualityPath -Raw|ConvertFrom-Json|Where-Object {$_.ConcealedFormat -gt 0 -or $_.Blank -eq $_.Rows})
+  if($quality.Count){
+   [void]$h.Append('<section><h2>Missing or concealed usage-report identities</h2><p class="note">Returned usage reports contain concealed identifiers or entirely blank identity/URL fields. Global Administrator access does not override the Microsoft 365 reporting privacy setting. Check Settings &gt; Org settings &gt; Services &gt; Reports. Change that tenant-wide setting only with customer authorization, then recollect the reports. This script does not change it or guess identities.</p><table><tr><th>Dataset</th><th>Field</th><th>Rows</th><th>Concealed format</th><th>Blank</th></tr>')
+   foreach($q in $quality){[void]$h.Append("<tr><td>$(ConvertTo-HtmlText $q.Dataset)</td><td>$(ConvertTo-HtmlText $q.Field)</td><td>$($q.Rows)</td><td>$($q.ConcealedFormat)</td><td>$($q.Blank)</td></tr>")}
+   [void]$h.Append('</table><p>Use UserAssignments.csv for directory UPNs and SharePointSites.csv / OneDriveSites.csv for direct site inventory, if those collectors succeeded. Do not join concealed values to those inventories by guessing.</p></section>')
+  }
+ }
  $license = $Manifest.Results | Where-Object Id -eq 'Licenses'
  if ($license.Status -eq 'Collected') {
   $licPath = Join-Path $Directory 'raw/Licenses.json'

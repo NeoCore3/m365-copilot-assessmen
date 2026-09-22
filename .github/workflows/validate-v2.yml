@@ -25,3 +25,8 @@ jobs:
       - name: Verify preservation and six v2 launchers offline
         shell: pwsh
         run: ./v2/tests/Test-Integration.ps1
+      - name: Test reported defects outside UTC
+        shell: pwsh
+        run: |
+          tzutil /s "Mountain Standard Time"
+          pwsh -NoProfile -File ./v2/tests/Test-RunFixes.ps1

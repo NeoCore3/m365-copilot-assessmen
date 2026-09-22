@@ -113,28 +113,28 @@
     ]
   },
   {
-    "Id": "DAGSharePointEveryone",
+    "Id": "DAGBothEveryone",
     "Workstream": "SharePoint",
     "Workload": "SPOExtra",
     "Switch": "IncludeDAG",
     "Mode": "Dag",
     "Source": "Get/Export-SPODataAccessGovernanceInsight",
-    "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant.",
+    "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant. This report covers SharePoint and OneDrive together; no Workload filter is sent.",
     "Certificate": true,
     "Entity": "Everyone",
-    "SpoWorkload": "SharePoint"
+    "SpoWorkload": "Both"
   },
   {
-    "Id": "DAGSharePointEveryoneExceptExternalUsers",
+    "Id": "DAGBothEveryoneExceptExternalUsers",
     "Workstream": "SharePoint",
     "Workload": "SPOExtra",
     "Switch": "IncludeDAG",
     "Mode": "Dag",
     "Source": "Get/Export-SPODataAccessGovernanceInsight",
-    "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant.",
+    "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant. This report covers SharePoint and OneDrive together; no Workload filter is sent.",
     "Certificate": true,
     "Entity": "EveryoneExceptExternalUsers",
-    "SpoWorkload": "SharePoint"
+    "SpoWorkload": "Both"
   },
   {
     "Id": "DAGSharePointEveryoneExceptExternalUsersAtSite",
@@ -233,30 +233,6 @@
     "SpoWorkload": "SharePoint"
   },
   {
-    "Id": "DAGOneDriveForBusinessEveryone",
-    "Workstream": "OneDrive",
-    "Workload": "SPOExtra",
-    "Switch": "IncludeDAG",
-    "Mode": "Dag",
-    "Source": "Get/Export-SPODataAccessGovernanceInsight",
-    "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant.",
-    "Certificate": true,
-    "Entity": "Everyone",
-    "SpoWorkload": "OneDriveForBusiness"
-  },
-  {
-    "Id": "DAGOneDriveForBusinessEveryoneExceptExternalUsers",
-    "Workstream": "OneDrive",
-    "Workload": "SPOExtra",
-    "Switch": "IncludeDAG",
-    "Mode": "Dag",
-    "Source": "Get/Export-SPODataAccessGovernanceInsight",
-    "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant.",
-    "Certificate": true,
-    "Entity": "EveryoneExceptExternalUsers",
-    "SpoWorkload": "OneDriveForBusiness"
-  },
-  {
     "Id": "DAGOneDriveForBusinessEveryoneExceptExternalUsersAtSite",
     "Workstream": "OneDrive",
     "Workload": "SPOExtra",
@@ -266,7 +242,8 @@
     "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant.",
     "Certificate": true,
     "Entity": "EveryoneExceptExternalUsersAtSite",
-    "SpoWorkload": "OneDriveForBusiness"
+    "SpoWorkload": "OneDriveForBusiness",
+    "NotApplicableReason": "Microsoft documents OneDrive EEEU reports at item level only; site-level OneDrive EEEU activity is not supported. No query is sent."
   },
   {
     "Id": "DAGOneDriveForBusinessEveryoneExceptExternalUsersForItems",
@@ -302,18 +279,6 @@
     "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant.",
     "Certificate": true,
     "Entity": "PermissionsReport",
-    "SpoWorkload": "OneDriveForBusiness"
-  },
-  {
-    "Id": "DAGOneDriveForBusinessSensitivityLabelForFiles",
-    "Workstream": "OneDrive",
-    "Workload": "SPOExtra",
-    "Switch": "IncludeDAG",
-    "Mode": "Dag",
-    "Source": "Get/Export-SPODataAccessGovernanceInsight",
-    "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant.",
-    "Certificate": true,
-    "Entity": "SensitivityLabelForFiles",
     "SpoWorkload": "OneDriveForBusiness"
   },
   {
@@ -503,5 +468,41 @@
     "Source": "Get-AdminFlow per environment",
     "Explanation": "Flow inventory in visible environments; not all flow definitions, secrets or capacity.",
     "Certificate": false
+  },
+  {
+    "Id": "SharePointTenant",
+    "Workstream": "SharePoint",
+    "Workload": "SPOExtra",
+    "Switch": "IncludeSharePoint",
+    "Mode": "Command",
+    "Command": "Get-SPOTenant",
+    "Source": "Get-SPOTenant",
+    "Explanation": "Direct tenant/site inventory in the isolated SPO session. URL and Owner fields are independent of usage-report concealment. Item permissions are separate.",
+    "Certificate": true,
+    "CoreSPO": true
+  },
+  {
+    "Id": "SharePointSites",
+    "Workstream": "SharePoint",
+    "Workload": "SPOExtra",
+    "Switch": "IncludeSharePoint",
+    "Mode": "SPOSites",
+    "Command": "Get-SPOSite",
+    "Source": "Get-SPOSite",
+    "Explanation": "Direct tenant/site inventory in the isolated SPO session. URL and Owner fields are independent of usage-report concealment. Item permissions are separate.",
+    "Certificate": true,
+    "CoreSPO": true
+  },
+  {
+    "Id": "OneDriveSites",
+    "Workstream": "OneDrive",
+    "Workload": "SPOExtra",
+    "Switch": "IncludeSharePoint",
+    "Mode": "ODSites",
+    "Command": "Get-SPOSite",
+    "Source": "Get-SPOSite",
+    "Explanation": "Direct tenant/site inventory in the isolated SPO session. URL and Owner fields are independent of usage-report concealment. Item permissions are separate.",
+    "Certificate": true,
+    "CoreSPO": true
   }
 ]

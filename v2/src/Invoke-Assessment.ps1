@@ -19,6 +19,7 @@ param(
  [ValidateRange(1,10000)][int]$MaxPages=200,
  [ValidateRange(1,1000000)][int]$MaxRows=100000,
  [ValidateRange(1,100000)][int]$MaxItems=1000,
+ [switch]$ExtensionsOnly,
  [switch]$DisableWAM
 )
 $ErrorActionPreference='Stop'
@@ -40,7 +41,7 @@ $results = [System.Collections.Generic.List[object]]::new()
 $diagnostics = [System.Collections.Generic.List[object]]::new()
 . (Join-Path $PSScriptRoot 'Diagnostics.ps1')
 . (Join-Path $PSScriptRoot 'WorkloadPrerequisites.ps1')
-$manifest = [ordered]@{SchemaVersion='2.0';ToolkitVersion='2.0.0-preview.1';BaselineCommit='dc684d38c8ab5f2b73f8a388178f6ef89826c72d';CustomerName=$CustomerName;TenantId="$TenantId";Cloud=$Cloud;Authentication=$Authentication;Period=$Period;CollectedAtUtc=[datetime]::UtcNow.ToString('o');Results=$results}
+$manifest = [ordered]@{SchemaVersion='2.0';ToolkitVersion='2.0.0-preview.2';BaselineCommit='dc684d38c8ab5f2b73f8a388178f6ef89826c72d';CustomerName=$CustomerName;TenantId="$TenantId";Cloud=$Cloud;Authentication=$Authentication;Period=$Period;CollectedAtUtc=[datetime]::UtcNow.ToString('o');Results=$results}
 function Add-Result {
  param([string]$Workstream,[string]$Id,[string]$Status,[string]$Source,[string]$Explanation,[object[]]$Rows=@())
  $Rows = @($Rows | Where-Object { $null -ne $_ })
@@ -64,6 +65,7 @@ function Invoke-ReadCollector {
 }
 $graphConnected=$false; $exchangeConnected=$false; $spoConnected=$false
 try {
+ if(-not $ExtensionsOnly){
  try {
   Import-Module Microsoft.Graph.Authentication -ErrorAction Stop
   $connect=@{TenantId="$TenantId";Environment=$profile.GraphEnvironment;ContextScope='Process';NoWelcome=$true;ErrorAction='Stop'}
@@ -124,6 +126,7 @@ try {
   $command=$p[1]
   Invoke-ReadCollector 'Purview' $p[0] $command 'Policy/configuration snapshot. Review mode, scope, exclusions and enforcement evidence separately.' { & $command -ErrorAction Stop }
  }
+ if($Cloud -ne 'Commercial'){
  if ($IncludeSharePoint) {
   try {
    Import-Module Microsoft.Online.SharePoint.PowerShell -UseWindowsPowerShell -ErrorAction Stop
@@ -148,6 +151,7 @@ try {
    elseif ($id -eq 'OneDriveSites') { Get-SPOSite -IncludePersonalSite $true -Limit All -Detailed | Where-Object Template -like 'SPSPERS*' }
    else { Get-SPOSite -Limit All -Detailed }
   }
+ }
  }
  # Defender for Office 365 configuration uses Exchange Online, independently of Graph and Purview.
  $defenderReady=$false
@@ -183,6 +187,7 @@ try {
    continue
   }
   Invoke-ReadCollector 'Defender' $id $command 'Defender for Office 365/EOP configuration. Evaluate policies with rules, priorities, recipients, exclusions and preset policies; this is not effectiveness or incident evidence.' { & $command -ErrorAction Stop }
+ }
  }
  . (Join-Path $PSScriptRoot 'Extensions.ps1')
  Invoke-AssessmentExtensions

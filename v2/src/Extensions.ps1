@@ -12,8 +12,10 @@ function Invoke-AssessmentExtensions {
  }
  $enabled=[Collections.Generic.List[object]]::new()
  foreach($d in $definitions){
-  $requested=($d.Switch -eq 'Always') -or [bool](Get-Variable -Name $d.Switch -ValueOnly -ErrorAction SilentlyContinue)
+  if($d.CoreSPO -and $Cloud -ne 'Commercial'){continue}
+  $requested=($d.Switch -eq 'Always' -and -not $ExtensionsOnly) -or [bool](Get-Variable -Name $d.Switch -ValueOnly -ErrorAction SilentlyContinue)
   if(-not $requested){Add-Result $d.Workstream $d.Id 'NotRequested' $d.Source ("Enable -$($d.Switch). "+$d.Explanation);continue}
+  if($d.NotApplicableReason){Add-Result $d.Workstream $d.Id 'NotApplicable' $d.Source $d.NotApplicableReason;continue}
   if($Cloud -ne 'Commercial'){Add-Result $d.Workstream $d.Id 'CapabilityUnverified' $d.Source 'This new collector has not been verified for GCC/GCC High. No Commercial endpoint was called. Original cloud-aware collectors still run.';continue}
   if($Authentication -eq 'Certificate' -and -not $d.Certificate){Add-Result $d.Workstream $d.Id 'AuthenticationUnverified' $d.Source 'This collector currently supports interactive mode only; certificate command-level support has not been verified. It will not prompt during an unattended run.';continue}
   $enabled.Add($d)
@@ -41,6 +43,12 @@ function Invoke-AssessmentExtensions {
   }catch{foreach($d in $group.Group){Add-Result $d.Workstream $d.Id 'Failed' $d.Source $_.Exception.Message}}
   finally{Remove-Item -LiteralPath $requestPath -Force -ErrorAction SilentlyContinue}
  }
+ . (Join-Path $PSScriptRoot 'EvidenceQuality.ps1')
+ $quality=@(foreach($id in @('TeamsUsage','SharePointUsage','OneDriveUsage','M365ActiveUsers','CopilotLicensedUsage','CopilotLicensedUsageV2')){
+  $path=Join-Path $directory ('raw/'+$id+'.json')
+  if(Test-Path -LiteralPath $path){Get-ReportIdentityQuality $id @(Get-Content -LiteralPath $path -Raw|ConvertFrom-Json)}
+ })
+ Add-Result 'Reporting' 'ReportIdentityQuality' 'Derived' 'Returned usage-report fields' 'Observed missing/concealed identifier counts. This does not read or change the tenant privacy setting.' $quality
  # Derived evidence references contain no automated approval or license-reclamation verdict.
  $refs=foreach($c in $extensionCoverage){foreach($id in $c.Datasets){$r=$results|Where-Object Id -eq $id;if($r){[pscustomobject]@{Category=$c.Group;Dataset=$id;Status=$r.Status;EvidenceFile="csv/$id.csv";Remaining=$c.Remaining;Approval='Human review required'}}}}
  Add-Result 'Governance' 'ExpansionEvidenceIndex' 'Derived' 'Current run collection-status' 'Evidence references only. No expansion gate has been approved.' @($refs)
@@ -50,6 +58,6 @@ function Invoke-AssessmentExtensions {
    [pscustomobject]@{Sku=$l.skuPartNumber;Enabled=$l.prepaidUnits.enabled;Consumed=$l.consumedUnits;Unallocated=([long]$l.prepaidUnits.enabled-[long]$l.consumedUnits);UsageEvidence='CopilotLicensedUsageV2';Decision='Reconcile SKU/user identity and report dates before recommending reclamation.'}
   }
   Add-Result 'Copilot' 'LicenseAllocationIndicators' 'Derived' 'Licenses dataset' 'Subscription allocation indicators for all SKUs; these do not identify inactive users or reproduce portal optimization recommendations.' @($rows)
- }else{Add-Result 'Copilot' 'LicenseAllocationIndicators' 'BlockedByConnection' 'Licenses dataset' 'Source license collection did not succeed.'}
+ }elseif($ExtensionsOnly){Add-Result 'Copilot' 'LicenseAllocationIndicators' 'NotRequested' 'Licenses dataset' 'Core licensing collection was excluded by ExtensionsOnly.'}else{Add-Result 'Copilot' 'LicenseAllocationIndicators' 'BlockedByConnection' 'Licenses dataset' 'Source license collection did not succeed.'}
  Export-SafeCsv -Rows @($refs) -Path (Join-Path $directory 'coverage-v2.csv')
 }

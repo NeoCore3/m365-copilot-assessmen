@@ -1,5 +1,7 @@
 # Version 2 setup and permissions
 
+For preview.2 fixes, targeted reruns, report privacy and module installation steps, see [REPAIR-PREVIEW2.md](REPAIR-PREVIEW2.md).
+
 Version 2 is an opt-in preview under `v2/`. The repository-root scripts are preserved. Use Windows PowerShell 7.4+ (`pwsh`), with Windows PowerShell 5.1 available for the SPO and Power Platform compatibility modules. Extract the whole repository ZIP; do not copy individual scripts into the original installation.
 
 The original core collectors retain their connection behavior. New extension workloads run sequentially in fresh `pwsh -NoProfile` processes. Expect separate sign-ins. No module installation, app creation, consent grant, role assignment, policy change, or DAG report generation happens automatically.

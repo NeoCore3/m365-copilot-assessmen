@@ -22,6 +22,7 @@ param(
  [ValidateRange(1,10000)][int]$MaxPages=200,
  [ValidateRange(1,1000000)][int]$MaxRows=100000,
  [ValidateRange(1,100000)][int]$MaxItems=1000,
+ [switch]$ExtensionsOnly,
  [switch]$DisableWAM
 )
 $root = Split-Path $PSScriptRoot -Parent

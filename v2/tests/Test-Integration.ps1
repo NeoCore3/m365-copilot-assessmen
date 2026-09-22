@@ -23,7 +23,7 @@ try {
  if($manifests.Count -ne 6){throw 'Expected six isolated reports.'}
  foreach($file in $manifests){
   $m=Get-Content $file.FullName -Raw|ConvertFrom-Json
-  if($m.ToolkitVersion -ne '2.0.0-preview.1'){throw 'Missing toolkit version.'}
+  if($m.ToolkitVersion -ne '2.0.0-preview.2'){throw 'Missing toolkit version.'}
   if(@($m.Results.Id|Select-Object -Unique).Count -ne $m.Results.Count){throw 'Duplicate dataset result.'}
   if(@($m.Results|Where-Object {$_.Status -eq 'Collected'}).Count){throw 'Missing module test reported collected data.'}
   $fabric=$m.Results|Where-Object Id -eq 'FabricTenantSettings'
