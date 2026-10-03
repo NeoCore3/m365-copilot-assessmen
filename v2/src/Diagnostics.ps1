@@ -10,7 +10,9 @@ function Add-AssessmentDiagnostic {
  param([string]$Id,[string]$Source,[System.Management.Automation.ErrorRecord]$Record)
  $message=Protect-AssessmentDiagnostic ($Record.Exception.Message)
  $hint='Check the service error, tenant/cloud, module version, workload RBAC and service availability. A failed query is not an empty dataset.'
- if ($Record.FullyQualifiedErrorId -match 'Modules_ModuleNotFound' -and $message -match 'ExchangeOnlineManagement') {
+ if ($message -match 'System.Text.Json|Assembly with same name is already loaded|Graph module could not load') {
+  $hint='Local module/dependency failure, not tenant RBAC. Start a fresh pwsh -NoProfile process. This build defaults to Graph Authentication 2.40.0; install with Install-Module Microsoft.Graph.Authentication -RequiredVersion 2.40.0 -Scope CurrentUser -Repository PSGallery. GraphModuleVersion can select another validated installed version. Do not copy DLLs between modules.'
+ } elseif ($Record.FullyQualifiedErrorId -match 'Modules_ModuleNotFound' -and $message -match 'ExchangeOnlineManagement') {
   $hint='Workstation prerequisite missing. In PowerShell 7 under the same Windows user, run: Install-Module ExchangeOnlineManagement -Scope CurrentUser -Repository PSGallery. Restart pwsh -NoProfile and verify Get-Module ExchangeOnlineManagement -ListAvailable. This failure occurred before tenant authentication.'
  } elseif ($message -match 'SharePoint prerequisite:' -or ($Record.FullyQualifiedErrorId -match 'NamedParameterNotFound' -and $Source -eq 'Connect-SPOService')) {
   $hint='Loaded SharePoint command is incompatible with the requested parameters. Install/update Microsoft.Online.SharePoint.PowerShell in Windows PowerShell 5.1, then close all assessment PowerShell windows and reopen pwsh. A compatibility proxy version of 1.0 is not the underlying SPO module version. Verify Get-Command Connect-SPOService -Syntax after importing.'

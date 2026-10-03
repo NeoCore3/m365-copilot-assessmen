@@ -19,11 +19,13 @@ param(
  [ValidateRange(1,10000)][int]$MaxPages=200,
  [ValidateRange(1,1000000)][int]$MaxRows=100000,
  [ValidateRange(1,100000)][int]$MaxItems=1000,
+ [string]$GraphModuleVersion='2.40.0',
  [switch]$ExtensionsOnly,
  [switch]$DisableWAM
 )
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'Report.ps1')
+. (Join-Path $PSScriptRoot 'Runtime.ps1')
 $root = Split-Path $PSScriptRoot -Parent
 $profile = Get-Content (Join-Path $root "config/$Cloud.json") -Raw | ConvertFrom-Json
 $catalog = @(Get-Content (Join-Path $root 'config/collectors.json') -Raw | ConvertFrom-Json)
@@ -41,7 +43,16 @@ $results = [System.Collections.Generic.List[object]]::new()
 $diagnostics = [System.Collections.Generic.List[object]]::new()
 . (Join-Path $PSScriptRoot 'Diagnostics.ps1')
 . (Join-Path $PSScriptRoot 'WorkloadPrerequisites.ps1')
-$manifest = [ordered]@{SchemaVersion='2.0';ToolkitVersion='2.0.0-preview.2';BaselineCommit='dc684d38c8ab5f2b73f8a388178f6ef89826c72d';CustomerName=$CustomerName;TenantId="$TenantId";Cloud=$Cloud;Authentication=$Authentication;Period=$Period;CollectedAtUtc=[datetime]::UtcNow.ToString('o');Results=$results}
+$manifest = [ordered]@{SchemaVersion='2.0';ToolkitVersion='2.0.0-preview.3';BaselineCommit='dc684d38c8ab5f2b73f8a388178f6ef89826c72d';CustomerName=$CustomerName;TenantId="$TenantId";Cloud=$Cloud;Authentication=$Authentication;Period=$Period;CollectedAtUtc=[datetime]::UtcNow.ToString('o');Results=$results}
+$stageNames=@();if(-not $ExtensionsOnly){$stageNames+=@('Graph','Purview');if($Cloud -ne 'Commercial'){$stageNames+='SharePoint'};$stageNames+='Defender'}
+$stageDefinitions=@(Get-Content (Join-Path $root 'config/extensions.json') -Raw|ConvertFrom-Json)
+$stageNames+=@($stageDefinitions|Where-Object {$Cloud -eq 'Commercial' -and -not $_.NotApplicableReason -and (($_.Switch -eq 'Always' -and -not $ExtensionsOnly) -or [bool](Get-Variable -Name $_.Switch -ValueOnly -ErrorAction SilentlyContinue)) -and ($Authentication -ne 'Certificate' -or $_.Certificate)}|Select-Object -ExpandProperty Workload -Unique)
+if($IncludeAgents -and $Cloud -eq 'Commercial'){$stageNames+='Agents'}
+$stageNames+='Reporting'
+$signatureText=(@($TenantId,$Cloud,$Authentication,$Period,$GraphModuleVersion,($stageNames -join ','),($DataverseUrls -join ','),($DriveIds -join ','),$MaxPages,$MaxRows,$MaxItems,$IncludeDAG,$IncludeSharePoint)-join '|')
+$manifest.ProgressSignature=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($signatureText)))
+Initialize-AssessmentProgress $stageNames $directory $OutputRoot $manifest.ProgressSignature
+$runCompleted=$false
 function Add-Result {
  param([string]$Workstream,[string]$Id,[string]$Status,[string]$Source,[string]$Explanation,[object[]]$Rows=@())
  $Rows = @($Rows | Where-Object { $null -ne $_ })
@@ -51,11 +62,13 @@ function Add-Result {
  } else {
   Export-SafeCsv -Rows @([pscustomobject]@{CollectionStatus=$Status;Explanation=$Explanation;Source=$Source}) -Path (Join-Path $directory "csv/$Id.csv")
  }
+ Update-AssessmentProgress "$Id : $Status ($($Rows.Count) rows)"
  $results.Add([pscustomobject]@{Workstream=$Workstream;Id=$Id;Status=$Status;RowCount=$Rows.Count;Source=$Source;CollectedAtUtc=[datetime]::UtcNow.ToString('o');Explanation=$Explanation})
 }
 . (Join-Path $PSScriptRoot 'Graph.ps1')
 function Invoke-ReadCollector {
  param([string]$Workstream,[string]$Id,[string]$Source,[string]$Explanation,[scriptblock]$Read)
+ Update-AssessmentProgress "Collecting $Id ($Source)"
  try { $rows=@(& $Read); Add-Result $Workstream $Id 'Collected' $Source $Explanation $rows }
  catch {
   $detail=Add-AssessmentDiagnostic -Id $Id -Source $Source -Record $_
@@ -66,8 +79,10 @@ function Invoke-ReadCollector {
 $graphConnected=$false; $exchangeConnected=$false; $spoConnected=$false
 try {
  if(-not $ExtensionsOnly){
+ Set-AssessmentStage 'Graph'
  try {
-  Import-Module Microsoft.Graph.Authentication -ErrorAction Stop
+  Import-AssessmentGraph $GraphModuleVersion
+  Show-AssessmentSignIn 'Microsoft Graph' 'Directory, licensing, usage and selected security configuration' $Authentication "$TenantId" $AdminUPN
   $connect=@{TenantId="$TenantId";Environment=$profile.GraphEnvironment;ContextScope='Process';NoWelcome=$true;ErrorAction='Stop'}
   if ($Authentication -eq 'Certificate') {
    $connect.ClientId=$ClientId; $connect.CertificateThumbprint=$CertificateThumbprint
@@ -94,6 +109,7 @@ try {
   $path=$c.Path.Replace('{period}',$Period)
   Invoke-ReadCollector $c.Workstream $c.Id $path $c.Explanation { Get-GraphRows -Path $path -Csv:($c.Kind -eq 'Csv') }
  }
+ Set-AssessmentStage 'Purview'
  $purview=@(
   @('SensitivityLabels','Get-Label'),@('LabelPolicies','Get-LabelPolicy'),
   @('DlpPolicies','Get-DlpCompliancePolicy'),@('DlpRules','Get-DlpComplianceRule'),
@@ -110,6 +126,8 @@ try {
    Set-AssessmentWamOption -Parameters $p -Command 'Connect-IPPSSession'
    if ($Authentication -eq 'Certificate') { $p.AppId=$ClientId;$p.CertificateThumbprint=$CertificateThumbprint;$p.Organization=$Organization }
    elseif ($AdminUPN) { $p.UserPrincipalName=$AdminUPN }
+   if((Get-Command Connect-IPPSSession).Parameters.ContainsKey('ShowBanner')){$p.ShowBanner=$false}
+   Show-AssessmentSignIn 'Purview' 'Labels, DLP and retention configuration' $Authentication "$TenantId" $AdminUPN
    Connect-IPPSSession @p | Out-Null
    $exchangeConnected=$true; $purviewReady=$true
   } catch {
@@ -127,11 +145,13 @@ try {
   Invoke-ReadCollector 'Purview' $p[0] $command 'Policy/configuration snapshot. Review mode, scope, exclusions and enforcement evidence separately.' { & $command -ErrorAction Stop }
  }
  if($Cloud -ne 'Commercial'){
+ Set-AssessmentStage 'SharePoint'
  if ($IncludeSharePoint) {
   try {
    Import-Module Microsoft.Online.SharePoint.PowerShell -UseWindowsPowerShell -ErrorAction Stop
    $spoCommand=Get-Command Connect-SPOService -ErrorAction Stop
    $s=Get-AssessmentSpoParameters -Command $spoCommand -Url $SharePointAdminUrl -Cloud $Cloud -Authority $profile.Authority -Authentication $Authentication -ClientId $ClientId -TenantId "$TenantId" -CertificateThumbprint $CertificateThumbprint
+   Show-AssessmentSignIn 'SharePoint' 'Tenant and site inventory' $Authentication "$TenantId" $AdminUPN
    Connect-SPOService @s | Out-Null
    $spoConnected=$true
   } catch {
@@ -154,6 +174,7 @@ try {
  }
  }
  # Defender for Office 365 configuration uses Exchange Online, independently of Graph and Purview.
+ Set-AssessmentStage 'Defender'
  $defenderReady=$false
  $defenderCommands=@(
   'Get-AntiPhishPolicy','Get-AntiPhishRule',
@@ -171,6 +192,7 @@ try {
    Set-AssessmentWamOption -Parameters $e -Command 'Connect-ExchangeOnline'
    if ($Authentication -eq 'Certificate') { $e.AppId=$ClientId; $e.CertificateThumbprint=$CertificateThumbprint; $e.Organization=$Organization }
    elseif ($AdminUPN) { $e.UserPrincipalName=$AdminUPN }
+   Show-AssessmentSignIn 'Exchange Online' 'Defender for Office 365/EOP policies' $Authentication "$TenantId" $AdminUPN
    Connect-ExchangeOnline @e | Out-Null
    $exchangeConnected=$true; $defenderReady=$true
   } catch {
@@ -191,6 +213,7 @@ try {
  }
  . (Join-Path $PSScriptRoot 'Extensions.ps1')
  Invoke-AssessmentExtensions
+ Set-AssessmentStage 'Reporting'
  foreach ($c in @($catalog | Where-Object Kind -eq 'Manual')) {
   $inputFile=if($EvidencePath){Join-Path $EvidencePath ($c.Id+'.csv')}else{$null}
   $metadataFile=if($EvidencePath){Join-Path $EvidencePath ($c.Id+'.metadata.json')}else{$null}
@@ -211,6 +234,7 @@ try {
    Add-Result $c.Workstream $c.Id $status $c.Source ($note+' Automated datasets: '+($ids -join ', ')+'. Review their individual statuses; this category is not fully validated.')
   }
  }
+$runCompleted=$true
 } finally {
  if ($graphConnected) { try { Disconnect-MgGraph -ErrorAction Stop | Out-Null } catch { [void](Add-AssessmentDiagnostic 'GraphDisconnect' 'Disconnect-MgGraph' $_) } }
  if ($exchangeConnected) { try { Disconnect-ExchangeOnline -Confirm:$false -ErrorAction Stop } catch { [void](Add-AssessmentDiagnostic 'ExchangeDisconnect' 'Disconnect-ExchangeOnline' $_) } }
@@ -219,16 +243,13 @@ try {
  $manifest.CompletedAtUtc=[datetime]::UtcNow.ToString('o')
  ConvertTo-Json -InputObject $manifest -Depth 30 | Set-Content -LiteralPath (Join-Path $directory 'manifest.json') -Encoding utf8
  Export-SafeCsv -Rows $results.ToArray() -Path (Join-Path $directory 'collection-status.csv')
+ Export-AssessmentReview -Manifest ([pscustomobject]$manifest) -Directory $directory
  Write-AssessmentReport -Manifest ([pscustomobject]$manifest) -Directory $directory
- # One consolidated CSV per workstream retains dataset boundaries and nested payloads.
- foreach ($group in @($results | Group-Object Workstream)) {
-  $combined=foreach($r in $group.Group){
-   foreach($row in @(Import-Csv -LiteralPath (Join-Path $directory "csv/$($r.Id).csv"))){
-    [pscustomobject]@{Dataset=$r.Id;Status=$r.Status;Source=$r.Source;CollectedAtUtc=$r.CollectedAtUtc;Data=($row | ConvertTo-Json -Depth 30 -Compress)}
-   }
-  }
-  Export-SafeCsv -Rows @($combined) -Path (Join-Path $directory "csv/Workstream-$($group.Name).csv")
- }
+ if($runCompleted){Complete-AssessmentProgress}
+ $manifest.RunCompleted=$runCompleted
+ $manifest.StageTimings=$script:assessmentProgress.Timings.ToArray()
+ ConvertTo-Json -InputObject $manifest -Depth 30 | Set-Content -LiteralPath (Join-Path $directory 'manifest.json') -Encoding utf8
+ Export-SafeCsv $manifest.StageTimings (Join-Path $directory 'stage-timings.csv')
  Write-Host "Report: $(Join-Path $directory 'Assessment.html')"
  Write-Host 'Review collection-status.csv and diagnostics.csv. No tenant configuration was changed.'
 }

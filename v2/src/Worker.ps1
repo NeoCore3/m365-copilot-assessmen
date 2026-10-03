@@ -5,12 +5,17 @@ $ErrorActionPreference='Stop'
 $request=Get-Content -LiteralPath $RequestPath -Raw|ConvertFrom-Json
 $workerResults=[Collections.Generic.List[object]]::new()
 $workerRows=[Collections.Generic.List[object]]::new()
+. (Join-Path $PSScriptRoot 'Runtime.ps1')
 . (Join-Path $PSScriptRoot 'Api.ps1')
 . (Join-Path $PSScriptRoot 'Collectors.ps1')
 . (Join-Path $PSScriptRoot 'WorkerSupport.ps1')
 
 try {
- try { Connect-Worker }
+ try {
+  Set-WorkerProgress "Connecting $($request.Workload); watch for its sign-in prompt" 'Authentication'
+  Show-AssessmentSignIn $request.Workload ((@($request.Definitions.Id)) -join ', ') $request.Authentication $request.TenantId $request.AdminUPN
+  Connect-Worker
+ }
  catch {
   $reason=Protect-AssessmentDiagnostic $_.Exception.Message
   if($reason.Length -gt 1200){$reason=$reason.Substring(0,1200)}

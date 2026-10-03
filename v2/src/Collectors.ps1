@@ -5,7 +5,7 @@ function Connect-Worker {
   'Endpoint' {Connect-AssessmentApi 'https://api.securitycenter.microsoft.com' @('https://api.securitycenter.microsoft.com/SecurityRecommendation.Read')}
   'Agents' {if(-not $request.DataverseUrls.Count){throw 'IncludeAgents requires DataverseUrls for the approved environments.'}}
   {$_ -in @('GraphExtra','ItemPermissions')} {
-   Import-Module Microsoft.Graph.Authentication -ErrorAction Stop
+   Import-AssessmentGraph $request.GraphModuleVersion
    $p=@{TenantId=$request.TenantId;ContextScope='Process';NoWelcome=$true;ErrorAction='Stop'}
    if($request.Authentication -eq 'Certificate'){$p.ClientId=$request.ClientId;$p.CertificateThumbprint=$request.CertificateThumbprint}
    else {$p.Scopes=@($request.Definitions.Permission|Select-Object -Unique);if($request.ClientId){$p.ClientId=$request.ClientId}}
@@ -19,6 +19,7 @@ function Connect-Worker {
    if($request.AdminUPN){$p.UserPrincipalName=$request.AdminUPN}
    if($request.Authentication -eq 'Certificate'){$p.Remove('UserPrincipalName');$p.AppId=$request.ClientId;$p.CertificateThumbprint=$request.CertificateThumbprint;$p.Organization=$request.Organization}
    if($request.DisableWAM){if(-not (Get-Command $command).Parameters.ContainsKey('DisableWAM')){throw "$command does not support DisableWAM; update ExchangeOnlineManagement."};$p.DisableWAM=$true}
+   if((Get-Command $command).Parameters.ContainsKey('ShowBanner')){$p.ShowBanner=$false}
    & $command @p|Out-Null
   }
   'SPOExtra' {
@@ -68,6 +69,7 @@ function Read-Activity([string[]]$Activities) {
    if(++$pages -gt $request.MaxPages){throw 'Activity Explorer page limit reached.'}
    $p=@{StartTime=$start;EndTime=$stop;OutputFormat='Json';PageSize=5000;Filter1=@('Activity')+$Activities;ErrorAction='Stop'}
    if($cookie){$p.PageCookie=$cookie}
+   if(Get-Command Set-WorkerProgress -ErrorAction SilentlyContinue){Set-WorkerProgress "Activity Explorer: $($start.ToString('yyyy-MM-dd')) | page $pages | $($workerRows.Count) rows"}
    $r=Export-ActivityExplorerData @p
    if($null -eq $r.LastPage -or $null -eq $r.ResultData){throw 'Activity Explorer returned an unexpected response.'}
    foreach($row in @($r.ResultData|ConvertFrom-Json)){
@@ -91,6 +93,7 @@ function Read-Audit {
   $range=$ranges.Dequeue();$session=[guid]::NewGuid().ToString();$count=0;$pageSeen=[Collections.Generic.HashSet[string]]::new()
   do {
    if(++$pages -gt $request.MaxPages){throw 'Audit page limit reached; narrow the period or increase MaxPages.'}
+   if(Get-Command Set-WorkerProgress -ErrorAction SilentlyContinue){Set-WorkerProgress "Audit: $($range[0].ToString('yyyy-MM-dd')) | page $pages | $($workerRows.Count) rows"}
    $rows=@(Search-UnifiedAuditLog -StartDate $range[0] -EndDate $range[1] -Operations CopilotInteraction -SessionId $session -SessionCommand ReturnLargeSet -ResultSize 5000 -ErrorAction Stop)
    if($rows.Count){$fingerprint=($rows|ForEach-Object Identity)-join '|';if(-not $pageSeen.Add($fingerprint)){throw 'Audit search repeated a page.'}}
    $count+=$rows.Count
@@ -114,16 +117,17 @@ function Read-Dag($Definition) {
  if(-not $reports.Count){$script:datasetStatus='NoExistingReport';$script:datasetNote='The service returned no existing report for this query. This is not an access-denied result. Check report scope, generation and retention in SharePoint admin center; this run creates no reports.';return}
  $incomplete=$false
  foreach($report in $reports){
-  $status=[string]$report.Status;$id=[string]$report.ReportId;$files=@();$export='NotReady'
+  $status=[string]$report.Status;$id=[string]$report.ReportId;$files=@();$export='NotReady';$exportError=''
   if($status -in @('Completed','Available','Success')){
    try {
     $id=([guid]::Parse($id)).ToString();$folder=Join-Path $request.DownloadPath "$($Definition.Id)/$id";New-Item -ItemType Directory -Path $folder -Force|Out-Null
+    if(Get-Command Set-WorkerProgress -ErrorAction SilentlyContinue){Set-WorkerProgress "Downloading DAG report $id for $($Definition.Id)"}
     Export-SPODataAccessGovernanceInsight -ReportID $id -DownloadPath $folder -ErrorAction Stop|Out-Null
     $files=@(Get-ChildItem -LiteralPath $folder -File -Recurse|ForEach-Object {[pscustomobject]@{Path=$_.FullName.Substring($request.DownloadPath.Length+1);SHA256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash;Bytes=$_.Length}})
     if(-not $files.Count){throw 'Export created no files.'};$export='Downloaded'
-   }catch{$export='ExportFailed';$incomplete=$true}
+   }catch{$export='ExportFailed';$incomplete=$true;$exportError=Protect-AssessmentDiagnostic $_.Exception.Message}
   }else{$incomplete=$true}
-  Add-WorkerRow ([pscustomobject]@{ReportId=$id;ReportEntity=$Definition.Entity;Workload=$Definition.SpoWorkload;ServiceStatus=$status;ExportStatus=$export;Files=$files;ReportMetadata=$report})
+  Add-WorkerRow ([pscustomobject]@{ReportId=$id;ReportEntity=$Definition.Entity;Workload=$Definition.SpoWorkload;ServiceStatus=$status;ExportStatus=$export;ExportError=$exportError;Files=$files;ReportMetadata=$report})
  }
  if($incomplete){throw 'Some DAG reports were pending, unavailable, or failed to download; inspect each ExportStatus. Only existing reports are requested.'}
 }

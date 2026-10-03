@@ -1,3 +1,7 @@
+# Microsoft 365 assessment v2 — 2.0.0-preview.3
+
+See [Preview 3 setup and report guide](docs/REPAIR-PREVIEW3.md) for the Graph module prerequisite, redesigned dashboard, readable exports and progress/ETA behavior. The original toolkit is preserved.
+
 # Microsoft 365 assessment toolkit — version 2 preview
 
 Version **2.0.0-preview.2** adds optional evidence collectors in a self-contained `v2/` folder. The working scripts at the repository root remain unchanged from commit `dc684d38c8ab5f2b73f8a388178f6ef89826c72d`.

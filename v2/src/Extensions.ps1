@@ -24,14 +24,15 @@ function Invoke-AssessmentExtensions {
   $enabled.Add($d)
  }
  foreach($group in @($enabled|Group-Object Workload)){
+  Set-AssessmentStage $group.Name
   Write-Host "V2: collecting $($group.Name) in an isolated PowerShell process."
   $workerDirectory=Join-Path $directory ('workers/'+$group.Name);New-Item -ItemType Directory -Path $workerDirectory -Force|Out-Null
   $requestPath=Join-Path $workerDirectory 'request.json';$resultPath=Join-Path $workerDirectory 'result.json'
-  $requestData=@{TenantId="$TenantId";Cloud=$Cloud;RunId=$runId;Authentication=$Authentication;ClientId=$ClientId;ApiClientId=$ApiClientId;CertificateThumbprint=$CertificateThumbprint;Organization=$Organization;AdminUPN=$AdminUPN;SharePointAdminUrl=$SharePointAdminUrl;DisableWAM=[bool]$DisableWAM;Period=$Period;EndUtc=$manifest.CollectedAtUtc;DataverseUrls=@($DataverseUrls);DriveIds=@($DriveIds);MaxPages=$MaxPages;MaxRows=$MaxRows;MaxItems=$MaxItems;Workload=$group.Name;Definitions=@($group.Group);ResultPath=$resultPath;DownloadPath=(Join-Path $directory 'downloads')}
+  $requestData=@{TenantId="$TenantId";Cloud=$Cloud;RunId=$runId;Authentication=$Authentication;ClientId=$ClientId;ApiClientId=$ApiClientId;CertificateThumbprint=$CertificateThumbprint;Organization=$Organization;AdminUPN=$AdminUPN;SharePointAdminUrl=$SharePointAdminUrl;DisableWAM=[bool]$DisableWAM;Period=$Period;EndUtc=$manifest.CollectedAtUtc;DataverseUrls=@($DataverseUrls);DriveIds=@($DriveIds);MaxPages=$MaxPages;MaxRows=$MaxRows;MaxItems=$MaxItems;Workload=$group.Name;Definitions=@($group.Group);ResultPath=$resultPath;DownloadPath=(Join-Path $directory 'downloads');GraphModuleVersion=$GraphModuleVersion;ProgressPath=(Join-Path $workerDirectory 'progress.json')}
   $requestData|ConvertTo-Json -Depth 15|Set-Content -LiteralPath $requestPath -Encoding utf8
   try {
-   & (Join-Path $PSHOME $(if($IsWindows){'pwsh.exe'}else{'pwsh'})) -NoProfile -File (Join-Path $PSScriptRoot 'Worker.ps1') -RequestPath $requestPath
-   if($LASTEXITCODE -ne 0 -or -not (Test-Path $resultPath)){throw 'Worker exited without valid results. Check module installation and script execution policy.'}
+   Invoke-AssessmentWorkerProcess $requestPath $requestData.ProgressPath
+   if(-not (Test-Path $resultPath)){throw 'Worker exited without valid results. Check module installation and script execution policy.'}
    $data=Get-Content -LiteralPath $resultPath -Raw|ConvertFrom-Json -Depth 100
    if($data.TenantId -ne "$TenantId" -or $data.Cloud -ne $Cloud -or $data.RunId -ne $runId -or $data.Workload -ne $group.Name){throw 'Worker provenance mismatch.'}
    $expected=@($group.Group.Id);$actual=@($data.Results.Id)

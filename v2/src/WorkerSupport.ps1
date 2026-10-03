@@ -4,6 +4,8 @@ function Add-WorkerRow($Row) {
  if($null -ne $Row){$workerRows.Add($Row)}
 }
 function Invoke-WorkerDataset($Definition,[scriptblock]$Read) {
+ if(Get-Command Set-WorkerProgress -ErrorAction SilentlyContinue){Set-WorkerProgress "Collecting $($Definition.Id)"}
+ Write-Host "Collecting $($Definition.Id) ($($Definition.Source))"
  $workerRows.Clear();$state='Collected';$note=$Definition.Explanation;$script:datasetStatus=$null;$script:datasetNote=$null
  $script:datasetScope=[ordered]@{RequestedPeriod=$request.Period;MaxPages=$request.MaxPages;MaxRows=$request.MaxRows;MaxItems=$request.MaxItems;EnvironmentUrl=$Definition.EnvironmentUrl;DriveIds=$request.DriveIds}
  try { & $Read | Out-Null; if($script:datasetStatus){$state=$script:datasetStatus};if($script:datasetNote){$note+=' '+$script:datasetNote} }
@@ -16,3 +18,4 @@ function Invoke-WorkerDataset($Definition,[scriptblock]$Read) {
  }
  $workerResults.Add([pscustomobject]@{Id=$Definition.Id;Workstream=$Definition.Workstream;Source=$Definition.Source;Status=$state;Explanation=$note;Scope=$script:datasetScope;Rows=$workerRows.ToArray()})
 }
+

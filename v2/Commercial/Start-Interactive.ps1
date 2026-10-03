@@ -22,8 +22,10 @@ param(
  [ValidateRange(1,10000)][int]$MaxPages=200,
  [ValidateRange(1,1000000)][int]$MaxRows=100000,
  [ValidateRange(1,100000)][int]$MaxItems=1000,
+ [string]$GraphModuleVersion='2.40.0',
  [switch]$ExtensionsOnly,
  [switch]$DisableWAM
 )
 $root = Split-Path $PSScriptRoot -Parent
-& (Join-Path $root 'src/Invoke-Assessment.ps1') @PSBoundParameters -Cloud 'Commercial' -Authentication 'Interactive'
+. (Join-Path $root 'src/Launch.ps1')
+Invoke-FreshAssessment -Parameters $PSBoundParameters -Root $root -Cloud 'Commercial' -Authentication 'Interactive'
