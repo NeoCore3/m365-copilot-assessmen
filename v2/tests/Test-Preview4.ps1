@@ -53,10 +53,12 @@ try{
   foreach($parameter in @('GraphAuthMode','RequireGraph','IncludeAgentCatalog')){if(-not $command.Parameters.ContainsKey($parameter)){throw "Missing $parameter in $wrapper"}}
  }
  function Import-Module {param($Name,$RequiredVersion,$ErrorAction)}
- $authProbe=@{DeviceSeen=$false}
+ $authProbe=@{DeviceSeen=$false;Visible=""}
+ function Out-Host { process { $authProbe.Visible += [string]$_ } }
  function Connect-MgGraph {
   param($TenantId,$Environment,$ContextScope,$NoWelcome,$ErrorAction,$Scopes,$ClientId,[switch]$UseDeviceCode)
   $authProbe.DeviceSeen=[bool]$UseDeviceCode
+  Write-Output 'SYNTHETIC DEVICE SIGN-IN INSTRUCTIONS'
   throw 'InteractiveBrowserCredential authentication failed: User canceled authentication.'
  }
  $stopped=$false
@@ -65,6 +67,7 @@ try{
  }catch{if($_.Exception.Message -notmatch 'Required Graph sign-in failed'){throw};$stopped=$true}
  $manifestFile=Get-ChildItem (Join-Path $temp 'stopped') -Recurse -Filter manifest.json|Select-Object -First 1
  $m=Get-Content $manifestFile.FullName -Raw|ConvertFrom-Json
+ if($authProbe.Visible -notmatch 'SYNTHETIC DEVICE SIGN-IN INSTRUCTIONS'){throw 'Device sign-in instructions were suppressed.'}
  if(-not $stopped -or -not $authProbe.DeviceSeen -or $m.RunCompleted -or $m.Results.Count -ne 1 -or $m.Results[0].Id -ne 'GraphConnection'){throw 'Graph device-code/early-stop semantics failed.'}
  if(-not (Test-Path (Join-Path $manifestFile.DirectoryName 'diagnostics.csv'))){throw 'Early stop lost diagnostics.'}
  Write-Host 'Preview.4 tests passed: DAG contained retry/path rejection, catalog pagination/details/limits, entry classification, six launcher parameters, Graph device-code and early-stop diagnostics.'
