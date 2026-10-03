@@ -1,5 +1,18 @@
 # Running v2 preview.4
 
+## Authentication display hotfix
+
+The launcher now inherits console handles directly. Graph sign-in messages are immediately written/flushed to the console, and progress bars are cleared while authentication is waiting. This fixes output-handling weaknesses; it does not establish the cause of a customer tenant sign-in failure.
+
+If DeviceCode still waits without displaying a code, stop it and use `-GraphAuthMode Browser`. To isolate authentication before a full run, run from v2/Commercial:
+
+```powershell
+pwsh -NoProfile -File ..\Test-GraphConnection.ps1 -TenantId <tenant-guid> -GraphAuthMode Browser
+```
+
+The test requests the core Graph permissions, verifies tenant context and exits. It does not collect the full assessment or share its process token with the later run. A failed connection prints the underlying error; preserve that error or the full run diagnostics.csv for diagnosis. Source code alone does not identify a tenant/network authentication failure.
+
+
 The collector can export the implemented API/PowerShell datasets for which the caller has access. It cannot promise every portal report, recover data beyond service retention, generate business approvals, or infer an enforcement outcome from a policy snapshot. `config/remediation.json` documents alternatives for all 20 assessment categories. No full Compliance Manager, Insider Risk, native DSPM posture, or Security Copilot configuration collector is implemented. These are implementation limitations, not claims that Microsoft offers no APIs.
 
 ## Changes

@@ -36,3 +36,6 @@ jobs:
       - name: Validate preview 4 recovery and catalog
         shell: pwsh
         run: ./v2/tests/Test-Preview4.ps1
+      - name: Verify authentication console streaming across processes
+        shell: pwsh
+        run: ./v2/tests/Test-AuthConsole.ps1

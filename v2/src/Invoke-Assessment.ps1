@@ -93,7 +93,7 @@ try {
    if ($ClientId) { $connect.ClientId=$ClientId }
    if ($GraphAuthMode -eq 'DeviceCode') { $connect.UseDeviceCode=$true }
   }
-  Connect-MgGraph @connect | Out-Host
+  Connect-AssessmentGraphSession $connect
   $ctx=Get-MgContext
   if ($ctx.TenantId -ne "$TenantId" -or $ctx.Environment -ne $profile.GraphEnvironment) { throw 'Graph tenant/cloud mismatch.' }
   $graphConnected=$true

@@ -12,7 +12,7 @@ function Connect-Worker {
    if($request.Authentication -eq 'Certificate'){$p.ClientId=$request.ClientId;$p.CertificateThumbprint=$request.CertificateThumbprint}
    else {$p.Scopes=@($request.Definitions.Permission|Select-Object -Unique);if($request.ClientId){$p.ClientId=$request.ClientId}}
    if($request.Authentication -eq 'Interactive' -and $request.GraphAuthMode -eq 'DeviceCode'){$p.UseDeviceCode=$true}
-   Connect-MgGraph @p|Out-Host
+   Connect-AssessmentGraphSession $p
    if((Get-MgContext).TenantId -ne $request.TenantId -or (Get-MgContext).Environment -ne 'Global'){throw 'Graph tenant/cloud mismatch.'}
   }
   {$_ -in @('Audit','Activity')} {

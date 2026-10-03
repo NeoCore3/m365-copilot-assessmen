@@ -1,3 +1,4 @@
+. (Join-Path $PSScriptRoot 'GraphSignIn.ps1')
 function Import-AssessmentGraph {
  param([string]$Version)
  $p=@{Name='Microsoft.Graph.Authentication';ErrorAction='Stop'}
@@ -67,8 +68,9 @@ function Invoke-AssessmentWorkerProcess {
  $process=[Diagnostics.Process]::Start($info)
  try{
   while(-not $process.WaitForExit(1000)){
-   $detail='Waiting for workload connection or response';$fraction=0
+   $detail='Waiting for workload connection or response';$fraction=0;$s=$null
    if(Test-Path -LiteralPath $ProgressPath){try{$s=Get-Content $ProgressPath -Raw|ConvertFrom-Json;$detail=$s.Detail;$fraction=[double]$s.Completed/[math]::Max(1,$s.Total)}catch{}}
+   if($s -and $s.Phase -eq 'Authentication'){Write-Progress -Id 1 -Activity 'M365 assessment' -Completed;continue}
    Update-AssessmentProgress $detail $fraction
   }
   if($process.ExitCode -ne 0){throw "Worker process exited with code $($process.ExitCode)."}
