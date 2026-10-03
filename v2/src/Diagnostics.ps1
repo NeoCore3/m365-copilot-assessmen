@@ -18,6 +18,8 @@ function Add-AssessmentDiagnostic {
   $hint='Loaded SharePoint command is incompatible with the requested parameters. Install/update Microsoft.Online.SharePoint.PowerShell in Windows PowerShell 5.1, then close all assessment PowerShell windows and reopen pwsh. A compatibility proxy version of 1.0 is not the underlying SPO module version. Verify Get-Command Connect-SPOService -Syntax after importing.'
  } elseif ($Record.Exception -is [System.Management.Automation.CommandNotFoundException]) {
   $hint='The command is not available in this session. Check module version, service/cloud support and the effective workload RBAC that controls imported commands.'
+ } elseif ($message -match 'User cancel(?:ed|led) authentication|authentication.*cancel') {
+  $hint='Graph/browser sign-in was canceled or dismissed; this error does not establish missing administrator rights. Complete sign-in in the browser, or rerun with -GraphAuthMode DeviceCode if tenant policy permits. Use -RequireGraph to stop immediately if the core Graph connection fails. DisableWAM applies to Exchange/Purview, not Graph.'
  } elseif ($message -match 'AADSTS65001|consent_required|admin.*consent') {
   $hint='Customer administrator consent is required for the requested application permissions. Workload RBAC is separate.'
  } elseif ($message -match 'AADSTS53003|Conditional Access') {

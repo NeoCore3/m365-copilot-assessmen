@@ -30,4 +30,5 @@ function Export-SafeCsv {
 function ConvertTo-HtmlText { param($Value) [System.Net.WebUtility]::HtmlEncode([string]$Value) }
 # Dashboard and reviewer exports keep raw JSON and original CSV evidence intact.
 . (Join-Path $PSScriptRoot 'ReviewExports.ps1')
+. (Join-Path $PSScriptRoot 'Remediation.ps1')
 . (Join-Path $PSScriptRoot 'Dashboard.ps1')

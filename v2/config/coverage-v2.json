@@ -125,7 +125,8 @@
     "Group": "AgentInventory",
     "Datasets": [
       "AgentRegistryPreview",
-      "DataverseBots"
+      "DataverseBots",
+      "AgentCatalogDetails"
     ],
     "Remaining": "Inventory covers registered agents and explicitly selected Dataverse environments only."
   },

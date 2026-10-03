@@ -17,12 +17,14 @@ param(
  [switch]$IncludeFabric, [switch]$IncludeDAG, [switch]$IncludeTeamsPolicies,
  [switch]$IncludePowerPlatform, [switch]$IncludeAudit, [switch]$IncludeActivityExplorer,
  [switch]$IncludeAgents, [switch]$IncludeAgentRegistryPreview, [switch]$IncludeEndpoint,
- [switch]$IncludeItemPermissions,
+ [switch]$IncludeItemPermissions, [switch]$IncludeAgentCatalog,
  [string]$ApiClientId, [string[]]$DataverseUrls, [string[]]$DriveIds,
  [ValidateRange(1,10000)][int]$MaxPages=200,
  [ValidateRange(1,1000000)][int]$MaxRows=100000,
  [ValidateRange(1,100000)][int]$MaxItems=1000,
  [string]$GraphModuleVersion='2.40.0',
+ [ValidateSet('Browser','DeviceCode')][string]$GraphAuthMode='Browser',
+ [switch]$RequireGraph,
  [switch]$ExtensionsOnly,
  [switch]$DisableWAM
 )

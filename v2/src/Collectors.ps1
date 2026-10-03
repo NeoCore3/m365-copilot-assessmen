@@ -1,14 +1,17 @@
+. (Join-Path $PSScriptRoot 'AgentCatalog.ps1')
+. (Join-Path $PSScriptRoot 'DagExport.ps1')
 . (Join-Path $PSScriptRoot 'EvidenceQuality.ps1')
 function Connect-Worker {
  switch($request.Workload){
   'Fabric' {Connect-AssessmentApi 'https://api.fabric.microsoft.com' @('https://api.fabric.microsoft.com/Tenant.Read.All','https://api.fabric.microsoft.com/Capacity.Read.All')}
   'Endpoint' {Connect-AssessmentApi 'https://api.securitycenter.microsoft.com' @('https://api.securitycenter.microsoft.com/SecurityRecommendation.Read')}
   'Agents' {if(-not $request.DataverseUrls.Count){throw 'IncludeAgents requires DataverseUrls for the approved environments.'}}
-  {$_ -in @('GraphExtra','ItemPermissions')} {
+  {$_ -in @('GraphExtra','ItemPermissions','GraphCatalog')} {
    Import-AssessmentGraph $request.GraphModuleVersion
    $p=@{TenantId=$request.TenantId;ContextScope='Process';NoWelcome=$true;ErrorAction='Stop'}
    if($request.Authentication -eq 'Certificate'){$p.ClientId=$request.ClientId;$p.CertificateThumbprint=$request.CertificateThumbprint}
    else {$p.Scopes=@($request.Definitions.Permission|Select-Object -Unique);if($request.ClientId){$p.ClientId=$request.ClientId}}
+   if($request.Authentication -eq 'Interactive' -and $request.GraphAuthMode -eq 'DeviceCode'){$p.UseDeviceCode=$true}
    Connect-MgGraph @p|Out-Null
    if((Get-MgContext).TenantId -ne $request.TenantId -or (Get-MgContext).Environment -ne 'Global'){throw 'Graph tenant/cloud mismatch.'}
   }
@@ -122,7 +125,7 @@ function Read-Dag($Definition) {
    try {
     $id=([guid]::Parse($id)).ToString();$folder=Join-Path $request.DownloadPath "$($Definition.Id)/$id";New-Item -ItemType Directory -Path $folder -Force|Out-Null
     if(Get-Command Set-WorkerProgress -ErrorAction SilentlyContinue){Set-WorkerProgress "Downloading DAG report $id for $($Definition.Id)"}
-    Export-SPODataAccessGovernanceInsight -ReportID $id -DownloadPath $folder -ErrorAction Stop|Out-Null
+    Export-AssessmentDagReport -ReportId $id -Folder $folder
     $files=@(Get-ChildItem -LiteralPath $folder -File -Recurse|ForEach-Object {[pscustomobject]@{Path=$_.FullName.Substring($request.DownloadPath.Length+1);SHA256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash;Bytes=$_.Length}})
     if(-not $files.Count){throw 'Export created no files.'};$export='Downloaded'
    }catch{$export='ExportFailed';$incomplete=$true;$exportError=Protect-AssessmentDiagnostic $_.Exception.Message}
@@ -162,6 +165,7 @@ function Read-WorkerDataset($d) {
  switch($d.Mode){
   'Api' {Read-ApiPages $d.Path $d.Field $d.SkipPageSize}
   'Graph' {Read-GraphPages $d.Path}
+  'AgentCatalog' {Read-AgentCatalog}
   'CopilotV2' {
    $period=if($request.Period -eq 'D30'){'D28'}else{$request.Period};$script:datasetScope.EffectivePeriod=$period;$tmp=Join-Path ([IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString()+'.csv')
    try {

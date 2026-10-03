@@ -33,3 +33,6 @@ jobs:
       - name: Validate dashboard and readable exports
         shell: pwsh
         run: ./v2/tests/Test-ReportExperience.ps1
+      - name: Validate preview 4 recovery and catalog
+        shell: pwsh
+        run: ./v2/tests/Test-Preview4.ps1

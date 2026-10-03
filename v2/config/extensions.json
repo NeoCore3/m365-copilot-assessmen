@@ -23,6 +23,17 @@
     "Permission": "AgentInstance.Read.All"
   },
   {
+    "Id": "AgentCatalogDetails",
+    "Workstream": "Agents",
+    "Workload": "GraphCatalog",
+    "Switch": "IncludeAgentCatalog",
+    "Mode": "AgentCatalog",
+    "Source": "Graph v1.0 /copilot/admin/catalog/packages and per-package details",
+    "Explanation": "Catalog packages and per-package configuration returned by Microsoft Graph. Requires Agent 365 licensing and CopilotPackages.Read.All. Catalog may include apps as well as agents; do not treat total rows as an agent count. Does not include unpublished bots outside this catalog.",
+    "Certificate": true,
+    "Permission": "CopilotPackages.Read.All"
+  },
+  {
     "Id": "FabricTenantSettings",
     "Workstream": "Fabric",
     "Workload": "Fabric",

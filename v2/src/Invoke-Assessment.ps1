@@ -14,12 +14,14 @@ param(
  [switch]$IncludeFabric, [switch]$IncludeDAG, [switch]$IncludeTeamsPolicies,
  [switch]$IncludePowerPlatform, [switch]$IncludeAudit, [switch]$IncludeActivityExplorer,
  [switch]$IncludeAgents, [switch]$IncludeAgentRegistryPreview, [switch]$IncludeEndpoint,
- [switch]$IncludeItemPermissions,
+ [switch]$IncludeItemPermissions, [switch]$IncludeAgentCatalog,
  [string]$ApiClientId, [string[]]$DataverseUrls, [string[]]$DriveIds,
  [ValidateRange(1,10000)][int]$MaxPages=200,
  [ValidateRange(1,1000000)][int]$MaxRows=100000,
  [ValidateRange(1,100000)][int]$MaxItems=1000,
  [string]$GraphModuleVersion='2.40.0',
+ [ValidateSet('Browser','DeviceCode')][string]$GraphAuthMode='Browser',
+ [switch]$RequireGraph,
  [switch]$ExtensionsOnly,
  [switch]$DisableWAM
 )
@@ -43,7 +45,7 @@ $results = [System.Collections.Generic.List[object]]::new()
 $diagnostics = [System.Collections.Generic.List[object]]::new()
 . (Join-Path $PSScriptRoot 'Diagnostics.ps1')
 . (Join-Path $PSScriptRoot 'WorkloadPrerequisites.ps1')
-$manifest = [ordered]@{SchemaVersion='2.0';ToolkitVersion='2.0.0-preview.3';BaselineCommit='dc684d38c8ab5f2b73f8a388178f6ef89826c72d';CustomerName=$CustomerName;TenantId="$TenantId";Cloud=$Cloud;Authentication=$Authentication;Period=$Period;CollectedAtUtc=[datetime]::UtcNow.ToString('o');Results=$results}
+$manifest = [ordered]@{SchemaVersion='2.0';ToolkitVersion='2.0.0-preview.4';BaselineCommit='dc684d38c8ab5f2b73f8a388178f6ef89826c72d';CustomerName=$CustomerName;TenantId="$TenantId";Cloud=$Cloud;Authentication=$Authentication;Period=$Period;GraphAuthMode=$GraphAuthMode;CollectedAtUtc=[datetime]::UtcNow.ToString('o');Results=$results}
 $stageNames=@();if(-not $ExtensionsOnly){$stageNames+=@('Graph','Purview');if($Cloud -ne 'Commercial'){$stageNames+='SharePoint'};$stageNames+='Defender'}
 $stageDefinitions=@(Get-Content (Join-Path $root 'config/extensions.json') -Raw|ConvertFrom-Json)
 $stageNames+=@($stageDefinitions|Where-Object {$Cloud -eq 'Commercial' -and -not $_.NotApplicableReason -and (($_.Switch -eq 'Always' -and -not $ExtensionsOnly) -or [bool](Get-Variable -Name $_.Switch -ValueOnly -ErrorAction SilentlyContinue)) -and ($Authentication -ne 'Certificate' -or $_.Certificate)}|Select-Object -ExpandProperty Workload -Unique)
@@ -89,6 +91,7 @@ try {
   } else {
    $connect.Scopes=@($catalog | Where-Object { $_.Permission -and ($IncludeDefender -or $_.Workstream -ne 'Defender') -and ($Cloud -ne 'GCCHigh' -or -not $_.GlobalOnly) } | Select-Object -ExpandProperty Permission -Unique)
    if ($ClientId) { $connect.ClientId=$ClientId }
+   if ($GraphAuthMode -eq 'DeviceCode') { $connect.UseDeviceCode=$true }
   }
   Connect-MgGraph @connect | Out-Null
   $ctx=Get-MgContext
@@ -98,6 +101,7 @@ try {
   $detail=Add-AssessmentDiagnostic 'GraphConnection' 'Connect-MgGraph' $_
   Add-Result 'Connection' 'GraphConnection' 'Failed' 'Connect-MgGraph' $detail
  }
+ if (-not $graphConnected -and $RequireGraph) { throw 'Required Graph sign-in failed. Stopped before other workload prompts. Review diagnostics.csv; rerun with -GraphAuthMode DeviceCode if permitted by tenant policy, or complete browser sign-in.' }
  foreach ($c in @($catalog | Where-Object Kind -ne 'Manual')) {
   if ($c.Workstream -eq 'Defender' -and -not $IncludeDefender) {
    Add-Result $c.Workstream $c.Id 'NotRequested' $c.Path 'Enable IncludeDefender to collect this dataset.'; continue

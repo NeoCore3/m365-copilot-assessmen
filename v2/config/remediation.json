@@ -1,0 +1,22 @@
+{
+  "CopilotChat": "Use Microsoft 365 admin center Copilot usage reports for Chat populations. Keep portal reporting dates and population with the evidence; current licenses cannot classify historical audit users.",
+  "CopilotOptimization": "Reconcile license assignments, returned usage dates and user identities. Review Microsoft 365 admin center recommendations and have the customer approve any license changes.",
+  "CopilotPrompts": "The licensed usage report supplies counts, not full conversation content. Use an authorized Purview eDiscovery workflow when conversation evidence is required; access and retention are separate.",
+  "DataAccessGovernance": "Use SharePoint admin center > Reports > Data access governance to generate missing scoped reports. Wait for completion, then rerun -IncludeDAG. Open the downloaded artifacts, not just the inventory CSV.",
+  "AdvancedManagement": "Review SharePoint admin center lifecycle and site access review settings/results. The tenant/site snapshots do not establish remediation completion.",
+  "OneDrivePermissions": "Use existing DAG exports plus an approved -IncludeItemPermissions -DriveIds scan for selected drives. For full ACL/inheritance review, inspect the relevant sites and items; a bounded scan cannot prove tenant-wide completeness.",
+  "AuditEvidence": "Use Purview Audit to verify search scope, retention and ingestion. This collector searches CopilotInteraction only; perform additional authorized searches for other operations.",
+  "DlpEffectiveness": "Review returned policies/rules and Activity Explorer events with the customer. Run customer-approved enforcement tests for targeted users, locations, exclusions and modes; configuration alone cannot prove effectiveness.",
+  "DSPMForAI": "Review Microsoft Purview DSPM for AI assessments and recommendations in the portal. Save available exports or dated screenshots with the scope; this script collects related activity metadata only.",
+  "DSPM": "Review Microsoft Purview DSPM posture assessments in the portal. Save available exports or dated evidence; a complete native posture collector is not implemented.",
+  "ComplianceManager": "Use Microsoft Purview Compliance Manager assessment export, preserving assessment name, date, improvement actions and evidence. This script has no full Compliance Manager collector.",
+  "InsiderRisk": "Have an authorized Insider Risk Management reviewer capture required policy, analytics and case evidence through Purview. Respect pseudonymization and case access. This script has no full Insider Risk collector.",
+  "DefenderConfiguration": "Use -IncludeEndpoint with an approved ApiClientId for endpoint recommendations. Review other Defender XDR workload settings in their portals; the MDO/EOP configuration exports do not cover all XDR products.",
+  "SecurityCopilotConfiguration": "Use Security Copilot settings to review capacity, roles, plugins/connections and workspace settings; capture authorized evidence. No full Security Copilot configuration collector is implemented.",
+  "AgentInventory": "Use -IncludeAgentCatalog for Graph catalog packages/details (Agent 365 license and CopilotPackages.Read.All consent required), plus -IncludeAgents -ApiClientId with approved DataverseUrls for Copilot Studio bots. Reconcile both with Microsoft 365 admin center agent inventory. Neither covers every unpublished or unregistered external agent.",
+  "CopilotStudioSecurity": "Collect approved Dataverse bot records, then review each agent in Copilot Studio for authentication, publication/sharing, knowledge sources, actions and connectors. Bot table fields do not establish effective access.",
+  "PowerPlatformConfiguration": "Review Power Platform admin center capacity, environment security, DLP scope and connector usage alongside the collected environments/apps/flows. Additional environment settings need separate evidence.",
+  "FabricConfigurationUsage": "Use -IncludeFabric -ApiClientId with approved Fabric permissions. For remaining coverage, review Fabric admin portal tenant/capacity settings, workspace access and activity/usage evidence; accessible capacities are not tenant-wide inventory.",
+  "TeamsPolicies": "Review effective user/group policy assignments and app-centric access in Teams admin center. The collected policy definitions alone do not establish which policy applies to each user.",
+  "ExpansionGates": "Have the named customer business and control owners review the evidence and record approval. The script cannot make or infer these approvals."
+}
