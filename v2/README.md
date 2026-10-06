@@ -1,3 +1,7 @@
+# v2 preview.5 — Audit repair and DAG report contents
+
+Read [RUN-PREVIEW5.md](docs/RUN-PREVIEW5.md) for current commands, optional workload prerequisites, verified fixes and remaining portal exports. Progress-file locks no longer interrupt collection; obsolete duplicate Copilot v1 queries are removed; DAG CSV contents and per-file row counts are visible in HTML. Use Rebuild-Report.ps1 to review an existing run without authentication. Original v1 remains unchanged.
+
 # v2 preview.4 — collection recovery and agent catalog
 
 Read [RUN-PREVIEW4.md](docs/RUN-PREVIEW4.md) for current commands, prerequisites and alternatives. Adds Graph device-code selection and fail-fast option, contained DAG filename retry, modern agent catalog/details, per-entry next actions, and separate dataset/assessment-coverage counts. Original v1 is unchanged. Live tenant results remain dependent on sign-in, consent, licensing, scope and service retention.

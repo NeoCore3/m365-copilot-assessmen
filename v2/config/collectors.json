@@ -105,15 +105,6 @@
   },
   {
     "Workstream": "Copilot",
-    "Id": "CopilotLicensedUsage",
-    "Path": "/v1.0/copilot/reports/getMicrosoft365CopilotUsageUserDetail(period='{period}',version='v1')",
-    "Permission": "Reports.Read.All",
-    "Explanation": "Licensed Microsoft 365 Copilot activity, report v1. This does not include unlicensed Chat usage or prompt counts. GCC High API is not supported.",
-    "Kind": "Csv",
-    "GlobalOnly": true
-  },
-  {
-    "Workstream": "Copilot",
     "Id": "CopilotChat",
     "Source": "Microsoft 365 admin center > Reports > Usage > Copilot Chat",
     "Explanation": "Export unlicensed Chat usage, refresh date, period, active users and prompts. Do not merge with licensed usage without validated identities and matching windows.",

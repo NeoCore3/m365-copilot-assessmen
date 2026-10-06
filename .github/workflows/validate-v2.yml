@@ -39,3 +39,6 @@ jobs:
       - name: Verify authentication console streaming across processes
         shell: pwsh
         run: ./v2/tests/Test-AuthConsole.ps1
+      - name: Verify progress lock recovery and DAG contents
+        shell: pwsh
+        run: ./v2/tests/Test-Preview5.ps1

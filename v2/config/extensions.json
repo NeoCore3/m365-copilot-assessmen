@@ -20,7 +20,8 @@
     "Explanation": "Preview registry inventory only; unregistered agents are outside this dataset.",
     "Certificate": true,
     "Path": "/beta/agentRegistry/agentInstances",
-    "Permission": "AgentInstance.Read.All"
+    "Permission": "AgentInstance.Read.All",
+    "NotApplicableReason": "Legacy Graph agentRegistry APIs are deprecated and replaced by Agent 365. No legacy query or legacy permission request is sent. Use -IncludeAgentCatalog for catalog packages and -IncludeAgents with approved DataverseUrls for bots; neither is a complete agent-instance inventory."
   },
   {
     "Id": "AgentCatalogDetails",
@@ -133,7 +134,8 @@
     "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant. This report covers SharePoint and OneDrive together; no Workload filter is sent.",
     "Certificate": true,
     "Entity": "Everyone",
-    "SpoWorkload": "Both"
+    "SpoWorkload": "Both",
+    "ReportType": "Snapshot"
   },
   {
     "Id": "DAGBothEveryoneExceptExternalUsers",
@@ -145,7 +147,8 @@
     "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant. This report covers SharePoint and OneDrive together; no Workload filter is sent.",
     "Certificate": true,
     "Entity": "EveryoneExceptExternalUsers",
-    "SpoWorkload": "Both"
+    "SpoWorkload": "Both",
+    "ReportType": "Snapshot"
   },
   {
     "Id": "DAGSharePointEveryoneExceptExternalUsersAtSite",
@@ -157,7 +160,8 @@
     "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant.",
     "Certificate": true,
     "Entity": "EveryoneExceptExternalUsersAtSite",
-    "SpoWorkload": "SharePoint"
+    "SpoWorkload": "SharePoint",
+    "ReportType": "RecentActivity"
   },
   {
     "Id": "DAGSharePointEveryoneExceptExternalUsersForItems",
@@ -169,7 +173,8 @@
     "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant.",
     "Certificate": true,
     "Entity": "EveryoneExceptExternalUsersForItems",
-    "SpoWorkload": "SharePoint"
+    "SpoWorkload": "SharePoint",
+    "ReportType": "RecentActivity"
   },
   {
     "Id": "DAGSharePointPermissionedUsers",
@@ -181,7 +186,8 @@
     "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant.",
     "Certificate": true,
     "Entity": "PermissionedUsers",
-    "SpoWorkload": "SharePoint"
+    "SpoWorkload": "SharePoint",
+    "ReportType": "Snapshot"
   },
   {
     "Id": "DAGSharePointPermissionsReport",
@@ -193,7 +199,8 @@
     "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant.",
     "Certificate": true,
     "Entity": "PermissionsReport",
-    "SpoWorkload": "SharePoint"
+    "SpoWorkload": "SharePoint",
+    "ReportType": "Snapshot"
   },
   {
     "Id": "DAGSharePointSensitivityLabelForFiles",
@@ -205,7 +212,8 @@
     "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant.",
     "Certificate": true,
     "Entity": "SensitivityLabelForFiles",
-    "SpoWorkload": "SharePoint"
+    "SpoWorkload": "SharePoint",
+    "ReportType": "Snapshot"
   },
   {
     "Id": "DAGSharePointSharingLinks_Anyone",
@@ -217,7 +225,8 @@
     "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant.",
     "Certificate": true,
     "Entity": "SharingLinks_Anyone",
-    "SpoWorkload": "SharePoint"
+    "SpoWorkload": "SharePoint",
+    "ReportType": "RecentActivity"
   },
   {
     "Id": "DAGSharePointSharingLinks_Guests",
@@ -229,7 +238,8 @@
     "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant.",
     "Certificate": true,
     "Entity": "SharingLinks_Guests",
-    "SpoWorkload": "SharePoint"
+    "SpoWorkload": "SharePoint",
+    "ReportType": "RecentActivity"
   },
   {
     "Id": "DAGSharePointSharingLinks_PeopleInYourOrg",
@@ -241,7 +251,8 @@
     "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant.",
     "Certificate": true,
     "Entity": "SharingLinks_PeopleInYourOrg",
-    "SpoWorkload": "SharePoint"
+    "SpoWorkload": "SharePoint",
+    "ReportType": "RecentActivity"
   },
   {
     "Id": "DAGOneDriveForBusinessEveryoneExceptExternalUsersAtSite",
@@ -254,7 +265,8 @@
     "Certificate": true,
     "Entity": "EveryoneExceptExternalUsersAtSite",
     "SpoWorkload": "OneDriveForBusiness",
-    "NotApplicableReason": "Microsoft documents OneDrive EEEU reports at item level only; site-level OneDrive EEEU activity is not supported. No query is sent."
+    "NotApplicableReason": "Microsoft documents OneDrive EEEU reports at item level only; site-level OneDrive EEEU activity is not supported. No query is sent.",
+    "ReportType": "RecentActivity"
   },
   {
     "Id": "DAGOneDriveForBusinessEveryoneExceptExternalUsersForItems",
@@ -266,7 +278,8 @@
     "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant.",
     "Certificate": true,
     "Entity": "EveryoneExceptExternalUsersForItems",
-    "SpoWorkload": "OneDriveForBusiness"
+    "SpoWorkload": "OneDriveForBusiness",
+    "ReportType": "RecentActivity"
   },
   {
     "Id": "DAGOneDriveForBusinessPermissionedUsers",
@@ -278,7 +291,8 @@
     "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant.",
     "Certificate": true,
     "Entity": "PermissionedUsers",
-    "SpoWorkload": "OneDriveForBusiness"
+    "SpoWorkload": "OneDriveForBusiness",
+    "ReportType": "Snapshot"
   },
   {
     "Id": "DAGOneDriveForBusinessPermissionsReport",
@@ -290,7 +304,8 @@
     "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant.",
     "Certificate": true,
     "Entity": "PermissionsReport",
-    "SpoWorkload": "OneDriveForBusiness"
+    "SpoWorkload": "OneDriveForBusiness",
+    "ReportType": "Snapshot"
   },
   {
     "Id": "DAGOneDriveForBusinessSharingLinks_Anyone",
@@ -302,7 +317,8 @@
     "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant.",
     "Certificate": true,
     "Entity": "SharingLinks_Anyone",
-    "SpoWorkload": "OneDriveForBusiness"
+    "SpoWorkload": "OneDriveForBusiness",
+    "ReportType": "RecentActivity"
   },
   {
     "Id": "DAGOneDriveForBusinessSharingLinks_Guests",
@@ -314,7 +330,8 @@
     "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant.",
     "Certificate": true,
     "Entity": "SharingLinks_Guests",
-    "SpoWorkload": "OneDriveForBusiness"
+    "SpoWorkload": "OneDriveForBusiness",
+    "ReportType": "RecentActivity"
   },
   {
     "Id": "DAGOneDriveForBusinessSharingLinks_PeopleInYourOrg",
@@ -326,7 +343,8 @@
     "Explanation": "Existing report inventory and downloaded artifacts. Service report dates, generation scope and ExportStatus govern coverage. A missing report is not a clean tenant.",
     "Certificate": true,
     "Entity": "SharingLinks_PeopleInYourOrg",
-    "SpoWorkload": "OneDriveForBusiness"
+    "SpoWorkload": "OneDriveForBusiness",
+    "ReportType": "RecentActivity"
   },
   {
     "Id": "SiteAccessReviews",

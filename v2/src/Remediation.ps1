@@ -2,6 +2,7 @@ function Get-AssessmentNextAction {
  param($Result,$CoverageActions)
  if($CoverageActions.Contains($Result.Id)){return $CoverageActions[$Result.Id]}
  if($Result.Status -eq 'Derived'){return 'No recollection required for this derived index. Review its source datasets; derived does not mean independently verified.'}
+ if($Result.Id -eq 'AgentRegistryPreview'){return 'Legacy Graph registry APIs are deprecated. Use -IncludeAgentCatalog for catalog package details and -IncludeAgents with approved DataverseUrls for bots. Reconcile agent instances separately in Microsoft 365 admin center; packages are not agent instances.'}
  if($Result.Status -eq 'NotApplicable'){return 'No retry required for this unsupported report type. See the explanation for the supported alternative.'}
  if($Result.Id -eq 'GraphConnection' -or ($Result.Status -eq 'BlockedByConnection' -and $Result.Source -match '^/|Licenses dataset')){
   return 'Read GraphConnection in diagnostics.csv. Complete Graph sign-in; for a dismissed browser prompt use -GraphAuthMode DeviceCode if permitted by tenant policy. Add -RequireGraph to stop before other workloads if core Graph sign-in fails. An authentication cancellation is not evidence of missing administrator roles.'

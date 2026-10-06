@@ -1,4 +1,29 @@
 . (Join-Path $PSScriptRoot 'GraphSignIn.ps1')
+# Progress is disposable telemetry, never collection evidence. Publish complete JSON
+# with a same-directory rename. A locked destination must not interrupt a query.
+function Write-AssessmentProgressFile {
+ param([string]$Path,$Value)
+ $temporary=$null
+ try {
+  $temporary=$Path+'.'+[guid]::NewGuid().ToString('N')+'.tmp'
+  [IO.File]::WriteAllText($temporary,($Value|ConvertTo-Json -Depth 8),[Text.UTF8Encoding]::new($false))
+  [IO.File]::Move($temporary,$Path,$true)
+ }catch {
+  # Best effort only: the next update will retry. Dataset/error/output writes
+  # deliberately do NOT use this function and remain failure-reporting operations.
+ }finally{if($temporary){try{[IO.File]::Delete($temporary)}catch{}}}
+}
+function Read-AssessmentProgressFile {
+ param([string]$Path)
+ $stream=$null;$reader=$null
+ try {
+  $stream=[IO.FileStream]::new($Path,[IO.FileMode]::Open,[IO.FileAccess]::Read,([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
+  $reader=[IO.StreamReader]::new($stream)
+  return ($reader.ReadToEnd()|ConvertFrom-Json -ErrorAction Stop)
+ }catch{return $null}
+ finally{if($reader){$reader.Dispose()}elseif($stream){$stream.Dispose()}}
+}
+
 function Import-AssessmentGraph {
  param([string]$Version)
  $p=@{Name='Microsoft.Graph.Authentication';ErrorAction='Stop'}
@@ -47,18 +72,18 @@ function Update-AssessmentProgress {
  $status="$pct% | Stage $($p.Index+1)/$($p.Stages.Count): $($p.Current) | Elapsed $($elapsed.ToString('hh\:mm\:ss')) | ETA $eta"
  Write-Progress -Id 1 -Activity 'M365 assessment' -Status $status -CurrentOperation $Detail -PercentComplete $pct
  if($Detail -ne $p.LastText){Write-Host "[$($now.ToString('HH:mm:ss')) UTC] $status | $Detail";$p.LastText=$Detail}
- [pscustomobject]@{TimestampUtc=$now.ToString('o');Stage=$p.Current;Detail=$Detail;Percent=$pct;ElapsedSeconds=[math]::Round($elapsed.TotalSeconds);ETA=$eta}|ConvertTo-Json|Set-Content (Join-Path $p.Directory 'progress.json') -Encoding utf8
+ Write-AssessmentProgressFile (Join-Path $p.Directory 'progress.json') ([pscustomobject]@{TimestampUtc=$now.ToString('o');Stage=$p.Current;Detail=$Detail;Percent=$pct;ElapsedSeconds=[math]::Round($elapsed.TotalSeconds);ETA=$eta})
 }
 function Complete-AssessmentProgress {
  if(-not $script:assessmentProgress){return}
  $p=$script:assessmentProgress;$p.Timings.Add([pscustomobject]@{Stage=$p.Current;Seconds=[math]::Round(([datetime]::UtcNow-$p.StageStarted).TotalSeconds,2)})
- [pscustomobject]@{TimestampUtc=[datetime]::UtcNow.ToString('o');Stage='Completed';Detail='Report written; review evidence statuses';Percent=100;ElapsedSeconds=[math]::Round(([datetime]::UtcNow-$p.Started).TotalSeconds);ETA='0 min'}|ConvertTo-Json|Set-Content (Join-Path $p.Directory 'progress.json') -Encoding utf8
+ Write-AssessmentProgressFile (Join-Path $p.Directory 'progress.json') ([pscustomobject]@{TimestampUtc=[datetime]::UtcNow.ToString('o');Stage='Completed';Detail='Report written; review evidence statuses';Percent=100;ElapsedSeconds=[math]::Round(([datetime]::UtcNow-$p.Started).TotalSeconds);ETA='0 min'})
  Write-Progress -Id 1 -Activity 'M365 assessment' -Completed
  Write-Host '100% | Report generation complete. Review statuses for missing or incomplete evidence.'
 }
 function Set-WorkerProgress {
  param([string]$Detail,[string]$Phase='Collecting')
- if($request.ProgressPath){[pscustomobject]@{Detail=$Detail;Phase=$Phase;Completed=$workerResults.Count;Total=@($request.Definitions).Count;AtUtc=[datetime]::UtcNow.ToString('o')}|ConvertTo-Json|Set-Content -LiteralPath $request.ProgressPath -Encoding utf8}
+ if($request.ProgressPath){Write-AssessmentProgressFile $request.ProgressPath ([pscustomobject]@{Detail=$Detail;Phase=$Phase;Completed=$workerResults.Count;Total=@($request.Definitions).Count;AtUtc=[datetime]::UtcNow.ToString('o')})}
 }
 function Invoke-AssessmentWorkerProcess {
  param([string]$RequestPath,[string]$ProgressPath)
@@ -69,7 +94,8 @@ function Invoke-AssessmentWorkerProcess {
  try{
   while(-not $process.WaitForExit(1000)){
    $detail='Waiting for workload connection or response';$fraction=0;$s=$null
-   if(Test-Path -LiteralPath $ProgressPath){try{$s=Get-Content $ProgressPath -Raw|ConvertFrom-Json;$detail=$s.Detail;$fraction=[double]$s.Completed/[math]::Max(1,$s.Total)}catch{}}
+   $s=Read-AssessmentProgressFile $ProgressPath
+   if($s){$detail=$s.Detail;$fraction=[double]$s.Completed/[math]::Max(1,$s.Total)}
    if($s -and $s.Phase -eq 'Authentication'){Write-Progress -Id 1 -Activity 'M365 assessment' -Completed;continue}
    Update-AssessmentProgress $detail $fraction
   }

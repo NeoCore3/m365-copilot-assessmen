@@ -116,6 +116,9 @@ function Read-Audit {
 function Read-Dag($Definition) {
  $dagParameters=@{ReportEntity=$Definition.Entity;ErrorAction='Stop'}
  if($Definition.SpoWorkload -ne 'Both'){$dagParameters.Workload=$Definition.SpoWorkload}
+ if($Definition.ReportType){$dagParameters.ReportType=$Definition.ReportType}
+ $script:datasetScope.DagQuery=[ordered]@{ReportEntity=$Definition.Entity;Workload=$Definition.SpoWorkload;ReportType=$Definition.ReportType}
+ $script:datasetScope.InventoryAtUtc=[datetime]::UtcNow.ToString('o')
  $reports=@(Get-SPODataAccessGovernanceInsight @dagParameters)
  if(-not $reports.Count){$script:datasetStatus='NoExistingReport';$script:datasetNote='The service returned no existing report for this query. This is not an access-denied result. Check report scope, generation and retention in SharePoint admin center; this run creates no reports.';return}
  $incomplete=$false
@@ -130,7 +133,7 @@ function Read-Dag($Definition) {
     if(-not $files.Count){throw 'Export created no files.'};$export='Downloaded'
    }catch{$export='ExportFailed';$incomplete=$true;$exportError=Protect-AssessmentDiagnostic $_.Exception.Message}
   }else{$incomplete=$true}
-  Add-WorkerRow ([pscustomobject]@{ReportId=$id;ReportEntity=$Definition.Entity;Workload=$Definition.SpoWorkload;ServiceStatus=$status;ExportStatus=$export;ExportError=$exportError;Files=$files;ReportMetadata=$report})
+  Add-WorkerRow ([pscustomobject]@{ReportId=$id;ReportEntity=$Definition.Entity;Workload=$Definition.SpoWorkload;ReportType=$Definition.ReportType;ServiceStatus=$status;ExportStatus=$export;ExportError=$exportError;Files=$files;ReportMetadata=$report})
  }
  if($incomplete){throw 'Some DAG reports were pending, unavailable, or failed to download; inspect each ExportStatus. Only existing reports are requested.'}
 }

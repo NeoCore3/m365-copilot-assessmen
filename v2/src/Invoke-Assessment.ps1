@@ -45,11 +45,19 @@ $results = [System.Collections.Generic.List[object]]::new()
 $diagnostics = [System.Collections.Generic.List[object]]::new()
 . (Join-Path $PSScriptRoot 'Diagnostics.ps1')
 . (Join-Path $PSScriptRoot 'WorkloadPrerequisites.ps1')
-$manifest = [ordered]@{SchemaVersion='2.0';ToolkitVersion='2.0.0-preview.4';BaselineCommit='dc684d38c8ab5f2b73f8a388178f6ef89826c72d';CustomerName=$CustomerName;TenantId="$TenantId";Cloud=$Cloud;Authentication=$Authentication;Period=$Period;GraphAuthMode=$GraphAuthMode;CollectedAtUtc=[datetime]::UtcNow.ToString('o');Results=$results}
+$manifest = [ordered]@{SchemaVersion='2.0';ToolkitVersion='2.0.0-preview.5';BaselineCommit='dc684d38c8ab5f2b73f8a388178f6ef89826c72d';CustomerName=$CustomerName;TenantId="$TenantId";Cloud=$Cloud;Authentication=$Authentication;Period=$Period;GraphAuthMode=$GraphAuthMode;CollectedAtUtc=[datetime]::UtcNow.ToString('o');Results=$results}
 $stageNames=@();if(-not $ExtensionsOnly){$stageNames+=@('Graph','Purview');if($Cloud -ne 'Commercial'){$stageNames+='SharePoint'};$stageNames+='Defender'}
 $stageDefinitions=@(Get-Content (Join-Path $root 'config/extensions.json') -Raw|ConvertFrom-Json)
 $stageNames+=@($stageDefinitions|Where-Object {$Cloud -eq 'Commercial' -and -not $_.NotApplicableReason -and (($_.Switch -eq 'Always' -and -not $ExtensionsOnly) -or [bool](Get-Variable -Name $_.Switch -ValueOnly -ErrorAction SilentlyContinue)) -and ($Authentication -ne 'Certificate' -or $_.Certificate)}|Select-Object -ExpandProperty Workload -Unique)
 if($IncludeAgents -and $Cloud -eq 'Commercial'){$stageNames+='Agents'}
+# Print the optional scope before any service sign-in, so omissions are visible.
+foreach($optional in @('IncludeFabric','IncludeAgentCatalog','IncludeAgents','IncludeEndpoint','IncludeItemPermissions','IncludeDAG')){
+ $selected=[bool](Get-Variable -Name $optional -ValueOnly)
+ Write-Host ("Scope: -{0} = {1}" -f $optional,$selected)
+}
+if($Authentication -eq 'Interactive' -and ($IncludeFabric -or $IncludeAgents -or $IncludeEndpoint) -and -not $ApiClientId){Write-Warning 'Requested API workloads require -ApiClientId. See docs/RUN-PREVIEW5.md before signing in; missing prerequisites will be reported as workload failures.'}
+if($IncludeAgents -and -not $DataverseUrls.Count){Write-Warning 'IncludeAgents requires approved -DataverseUrls; no tenant-wide environment scan is implied.'}
+if($IncludeItemPermissions -and -not $DriveIds.Count){Write-Warning 'IncludeItemPermissions requires approved -DriveIds; it is a bounded scan.'}
 $stageNames+='Reporting'
 $signatureText=(@($TenantId,$Cloud,$Authentication,$Period,$GraphModuleVersion,($stageNames -join ','),($DataverseUrls -join ','),($DriveIds -join ','),$MaxPages,$MaxRows,$MaxItems,$IncludeDAG,$IncludeSharePoint)-join '|')
 $manifest.ProgressSignature=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($signatureText)))
